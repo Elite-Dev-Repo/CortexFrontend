@@ -19,7 +19,7 @@ const Header = () => {
     },
     {
       name: "Sign In",
-      route: "/",
+      route: "/auth",
     },
   ];
 
