@@ -1,4 +1,5 @@
-import { Blocks, LogOut } from "lucide-react"
+import { Blocks, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
   return (
@@ -16,10 +17,12 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
       >
         <div className="flex items-center gap-2 px-6 h-16 border-b border-white/10">
           <Blocks size={22} />
-          <span className="tracking-wider font-light">Cortex</span>
+          <Link to="/">
+            <span className="tracking-wider font-light">Cortex</span>
+          </Link>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-5">
           {sections.map((section) => (
             <div key={section.tag}>
               {section.tag && (
@@ -32,8 +35,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
                   <button
                     key={item.label}
                     onClick={() => {
-                      item.onClick?.()
-                      setSidebarOpen(false)
+                      item.onClick?.();
+                      setSidebarOpen(false);
                     }}
                     disabled={item.disabled}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/75 hover:text-white hover:bg-white/5 transition-all ${
@@ -60,7 +63,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
         </div>
       </aside>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;
