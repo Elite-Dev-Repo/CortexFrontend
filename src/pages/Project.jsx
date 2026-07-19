@@ -4,13 +4,13 @@ import { motion } from "framer-motion"
 import {
   Blocks, Plus, X, LogOut, LayoutDashboard, Menu,
   ArrowLeft, SquareStack, Tag, CheckCircle2, Circle,
-  Clock, ListChecks, Folder, MoreHorizontal, Trash2, Pencil
+  ListChecks, Folder, MoreHorizontal, Trash2
 } from "lucide-react"
 import { toast } from "sonner"
 import { ACCESS } from "@/lib/constants"
 import { getProject, updateProject, deleteProject } from "@/lib/projectsApi"
-import { getFeatures, createFeature, updateFeature, deleteFeature } from "@/lib/featuresApi"
-import { createTask, updateTask, deleteTask } from "@/lib/tasksApi"
+import { getFeatures, createFeature, deleteFeature } from "@/lib/featuresApi"
+import { getTasks, createTask, updateTask, deleteTask } from "@/lib/tasksApi"
 
 const STATUS_COLORS = {
   pending: { bg: "bg-yellow-500/10", text: "text-yellow-400", dot: "bg-yellow-400" },
@@ -23,14 +23,18 @@ const Project = () => {
   const navigate = useNavigate()
   const [project, setProject] = useState(null)
   const [features, setFeatures] = useState([])
+  const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showCreateFeature, setShowCreateFeature] = useState(false)
   const [featureForm, setFeatureForm] = useState({ name: "", description: "", tags: "" })
   const [creatingFeature, setCreatingFeature] = useState(false)
   const [editingStatus, setEditingStatus] = useState(false)
-  const [newTaskText, setNewTaskText] = useState({})
   const [featureMenu, setFeatureMenu] = useState(null)
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [newTaskName, setNewTaskName] = useState("")
+  const [newTaskFeature, setNewTaskFeature] = useState("")
+  const [creatingTask, setCreatingTask] = useState(false)
   const [taskMenu, setTaskMenu] = useState(null)
 
   useEffect(() => {
@@ -43,12 +47,17 @@ const Project = () => {
 
   const fetchProject = async () => {
     try {
-      const [projectData, featuresData] = await Promise.all([
+      const [projectData, featuresData, tasksData] = await Promise.all([
         getProject(projectUuid),
         getFeatures(),
+        getTasks(),
       ])
       setProject(projectData)
       setFeatures(featuresData.filter((f) => f.project === projectUuid))
+      setTasks(tasksData.filter((t) => {
+        const feature = featuresData.find((f) => f.id === t.feature)
+        return feature && feature.project === projectUuid
+      }))
     } catch {
       toast.error("Project not found")
       navigate(`/workspace/${uuid}`)
@@ -59,7 +68,7 @@ const Project = () => {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      const updated = await updateProject(projectUuid, { status: newStatus })
+      await updateProject(projectUuid, { status: newStatus })
       setProject((prev) => ({ ...prev, status: newStatus }))
       setEditingStatus(false)
       toast.success(`Status set to ${newStatus.replace("_", " ")}`)
@@ -97,58 +106,45 @@ const Project = () => {
     try {
       await deleteFeature(id)
       setFeatures((prev) => prev.filter((f) => f.id !== id))
+      setTasks((prev) => prev.filter((t) => t.feature !== id))
       toast.success("Feature deleted")
     } catch {
       toast.error("Failed to delete feature")
     }
   }
 
-  const handleAddTask = async (featureId) => {
-    const text = newTaskText[featureId]?.trim()
-    if (!text) return
+  const handleAddTask = async (e) => {
+    e.preventDefault()
+    if (!newTaskName.trim() || !newTaskFeature) return
+    setCreatingTask(true)
     try {
-      const task = await createTask({ name: text, feature: featureId })
-      setFeatures((prev) =>
-        prev.map((f) =>
-          f.id === featureId
-            ? { ...f, tasks: [...(f.tasks || []), task] }
-            : f
-        )
-      )
-      setNewTaskText((prev) => ({ ...prev, [featureId]: "" }))
+      const task = await createTask({ name: newTaskName.trim(), feature: newTaskFeature })
+      setTasks((prev) => [...prev, task])
+      setShowAddTask(false)
+      setNewTaskName("")
+      setNewTaskFeature("")
       toast.success("Task added")
     } catch (err) {
-      const msg = err.response?.data?.name?.[0] || err.response?.data?.description?.[0] || "Failed to add task"
-      toast.error(msg)
+      toast.error(err.response?.data?.name?.[0] || "Failed to add task")
+    } finally {
+      setCreatingTask(false)
     }
   }
 
-  const handleToggleTask = async (task, featureId) => {
+  const handleToggleTask = async (task) => {
     const newStatus = task.status === "completed" ? "pending" : "completed"
     try {
       const updated = await updateTask(task.id, { status: newStatus })
-      setFeatures((prev) =>
-        prev.map((f) =>
-          f.id === featureId
-            ? { ...f, tasks: f.tasks.map((t) => (t.id === task.id ? updated : t)) }
-            : f
-        )
-      )
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)))
     } catch {
       toast.error("Failed to update task")
     }
   }
 
-  const handleDeleteTask = async (taskId, featureId) => {
+  const handleDeleteTask = async (taskId) => {
     try {
       await deleteTask(taskId)
-      setFeatures((prev) =>
-        prev.map((f) =>
-          f.id === featureId
-            ? { ...f, tasks: f.tasks.filter((t) => t.id !== taskId) }
-            : f
-        )
-      )
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
       toast.success("Task deleted")
     } catch {
       toast.error("Failed to delete task")
@@ -173,6 +169,10 @@ const Project = () => {
   }
 
   const sc = project ? STATUS_COLORS[project.status] || STATUS_COLORS.pending : STATUS_COLORS.pending
+  const grouped = features.reduce((acc, f) => {
+    acc[f.id] = { feature: f, tasks: tasks.filter((t) => t.feature === f.id) }
+    return acc
+  }, {})
 
   if (loading) {
     return (
@@ -270,13 +270,8 @@ const Project = () => {
               </div>
             )}
           </div>
-          <span className="text-xs text-white/30">
-            {features.length} feature{features.length !== 1 ? "s" : ""}
-          </span>
-          <span className="text-xs text-white/30">
-            {features.reduce((sum, f) => sum + (f.tasks?.length || 0), 0)} task
-            {features.reduce((sum, f) => sum + (f.tasks?.length || 0), 0) !== 1 ? "s" : ""}
-          </span>
+          <span className="text-xs text-white/30">{features.length} features</span>
+          <span className="text-xs text-white/30">{tasks.length} tasks</span>
           {project?.description && (
             <span className="text-xs text-white/30 truncate max-w-[300px] ml-auto hidden md:block">
               {project.description}
@@ -284,136 +279,164 @@ const Project = () => {
           )}
         </div>
 
-        {/* Feature grid */}
-        <div className="flex-1 p-4 lg:p-8 overflow-y-auto">
-          {features.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <SquareStack size={48} className="text-white/20 mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No features mapped yet</h2>
-              <p className="text-white/40 text-sm mb-6 max-w-sm">
-                Features are the building blocks of your project. Add tags to categorize and tasks to break them down.
-              </p>
-              <button onClick={() => setShowCreateFeature(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all">
-                <Plus size={16} /> Map a Feature
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {features.map((feature, i) => (
-                <motion.div
-                  key={feature.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.05 }}
-                  className="bg-foreground border border-white/10 rounded-xl overflow-hidden hover:border-white/20 transition-all group"
-                >
-                  {/* Feature header */}
-                  <div className="p-4 pb-3 border-b border-white/5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <SquareStack size={15} className="text-white/40 shrink-0" />
-                          <h3 className="font-semibold text-sm truncate">{feature.name}</h3>
+        {/* Content area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 lg:p-8 space-y-8">
+            {/* Features section */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Features</h2>
+              </div>
+              {features.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/10 rounded-xl">
+                  <SquareStack size={40} className="text-white/20 mb-3" />
+                  <p className="text-sm text-white/40 mb-4">Map your first feature to start breaking down this project.</p>
+                  <button onClick={() => setShowCreateFeature(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all">
+                    <Plus size={15} /> Map a Feature
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {features.map((feature, i) => {
+                    const count = tasks.filter((t) => t.feature === feature.id).length
+                    return (
+                      <motion.div
+                        key={feature.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: i * 0.05 }}
+                        className="bg-foreground border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <SquareStack size={15} className="text-white/40 shrink-0" />
+                              <h3 className="font-semibold text-sm truncate">{feature.name}</h3>
+                            </div>
+                            {feature.tags?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {feature.tags.map((tag, ti) => (
+                                  <span key={ti}
+                                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 font-medium">
+                                    <Tag size={10} /> {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="relative shrink-0">
+                            <button
+                              onClick={() => setFeatureMenu(featureMenu === feature.id ? null : feature.id)}
+                              className="p-1 hover:bg-white/5 rounded-lg text-white/20 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
+                              <MoreHorizontal size={14} />
+                            </button>
+                            {featureMenu === feature.id && (
+                              <div className="absolute right-0 top-7 w-28 bg-foreground border border-white/10 rounded-lg shadow-xl py-1 z-20">
+                                <button onClick={() => { handleDeleteFeature(feature.id); setFeatureMenu(null) }}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-white/5">
+                                  <Trash2 size={13} /> Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {feature.tags?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {feature.tags.map((tag, ti) => (
-                              <span key={ti}
-                                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 font-medium">
-                                <Tag size={10} /> {tag}
-                              </span>
+                        {feature.description && (
+                          <p className="text-xs text-white/40 mt-2 line-clamp-2">{feature.description}</p>
+                        )}
+                        <div className="flex items-center gap-1.5 mt-3 text-[11px] text-white/30">
+                          <ListChecks size={12} />
+                          <span>{count} task{count !== 1 ? "s" : ""}</span>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+
+            {/* Tasks section - separate from features */}
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+                  Tasks <span className="text-white/20 font-normal">({tasks.length})</span>
+                </h2>
+                {features.length > 0 && (
+                  <button onClick={() => { setShowAddTask(true); setNewTaskFeature(features[0]?.id || "") }}
+                    className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-all">
+                    <Plus size={14} /> Add Task
+                  </button>
+                )}
+              </div>
+
+              {tasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/10 rounded-xl">
+                  <ListChecks size={40} className="text-white/20 mb-3" />
+                  <p className="text-sm text-white/40 mb-4">
+                    {features.length === 0
+                      ? "Create a feature first, then add tasks to it."
+                      : "No tasks yet. Break your features down into actionable tasks."}
+                  </p>
+                  {features.length > 0 && (
+                    <button onClick={() => { setShowAddTask(true); setNewTaskFeature(features[0]?.id || "") }}
+                      className="flex items-center gap-2 px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all">
+                      <Plus size={15} /> Add Task
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-foreground border border-white/10 rounded-xl overflow-hidden">
+                  <div className="divide-y divide-white/5">
+                    {features.map((feature) => {
+                      const featureTasks = tasks.filter((t) => t.feature === feature.id)
+                      if (featureTasks.length === 0) return null
+                      return (
+                        <div key={feature.id}>
+                          <div className="px-4 py-2 bg-white/[0.02] flex items-center gap-2">
+                            <SquareStack size={13} className="text-white/30" />
+                            <span className="text-xs font-medium text-white/50">{feature.name}</span>
+                            <span className="text-[11px] text-white/20">{featureTasks.length}</span>
+                          </div>
+                          <div className="divide-y divide-white/5">
+                            {featureTasks.map((task) => (
+                              <div key={task.id}
+                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/[0.02] transition-all group/task">
+                                <button onClick={() => handleToggleTask(task)} className="shrink-0">
+                                  {task.status === "completed" ? (
+                                    <CheckCircle2 size={16} className="text-green-400" />
+                                  ) : (
+                                    <Circle size={16} className="text-white/30 group-hover/task:text-white/50" />
+                                  )}
+                                </button>
+                                <span className={`text-sm flex-1 ${task.status === "completed" ? "text-white/30 line-through" : "text-white/80"}`}>
+                                  {task.name}
+                                </span>
+                                <div className="relative shrink-0">
+                                  <button
+                                    onClick={() => setTaskMenu(taskMenu === task.id ? null : task.id)}
+                                    className="p-1 hover:bg-white/5 rounded text-white/10 hover:text-white/40 opacity-0 group-hover/task:opacity-100 transition-all">
+                                    <MoreHorizontal size={13} />
+                                  </button>
+                                  {taskMenu === task.id && (
+                                    <div className="absolute right-0 top-7 w-24 bg-foreground border border-white/10 rounded-lg shadow-xl py-1 z-20">
+                                      <button onClick={() => { handleDeleteTask(task.id); setTaskMenu(null) }}
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-white/5">
+                                        <Trash2 size={11} /> Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             ))}
                           </div>
-                        )}
-                      </div>
-                      <div className="relative shrink-0">
-                        <button
-                          onClick={() => setFeatureMenu(featureMenu === feature.id ? null : feature.id)}
-                          className="p-1 hover:bg-white/5 rounded-lg text-white/20 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <MoreHorizontal size={14} />
-                        </button>
-                        {featureMenu === feature.id && (
-                          <div className="absolute right-0 top-7 w-28 bg-foreground border border-white/10 rounded-lg shadow-xl py-1 z-20">
-                            <button onClick={() => { handleDeleteFeature(feature.id); setFeatureMenu(null) }}
-                              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-white/5">
-                              <Trash2 size={13} /> Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {feature.description && (
-                      <p className="text-xs text-white/40 mt-1.5 line-clamp-2">{feature.description}</p>
-                    )}
-                  </div>
-
-                  {/* Tasks */}
-                  <div className="px-4 py-2">
-                    <div className="flex items-center gap-1.5 text-[11px] text-white/30 mb-2">
-                      <ListChecks size={12} />
-                      <span>{feature.tasks?.length || 0} task{(feature.tasks?.length || 0) !== 1 ? "s" : ""}</span>
-                    </div>
-
-                    <div className="space-y-1 max-h-48 overflow-y-auto custom-scroll">
-                      {(feature.tasks || []).map((task) => (
-                        <div key={task.id} className="group/task flex items-center gap-2 py-1 px-1 rounded-md hover:bg-white/5 transition-all relative">
-                          <button
-                            onClick={() => handleToggleTask(task, feature.id)}
-                            className="shrink-0 mt-0.5"
-                          >
-                            {task.status === "completed" ? (
-                              <CheckCircle2 size={14} className="text-green-400" />
-                            ) : (
-                              <Circle size={14} className="text-white/30 group-hover/task:text-white/50" />
-                            )}
-                          </button>
-                          <span className={`text-xs flex-1 truncate ${task.status === "completed" ? "text-white/30 line-through" : "text-white/70"}`}>
-                            {task.name}
-                          </span>
-                          <button
-                            onClick={() => setTaskMenu(taskMenu === task.id ? null : task.id)}
-                            className="p-0.5 hover:bg-white/10 rounded text-white/10 hover:text-white/40 opacity-0 group-hover/task:opacity-100 transition-all shrink-0"
-                          >
-                            <MoreHorizontal size={11} />
-                          </button>
-                          {taskMenu === task.id && (
-                            <div className="absolute right-0 top-6 w-24 bg-foreground border border-white/10 rounded-lg shadow-xl py-1 z-20">
-                              <button
-                                onClick={() => { handleDeleteTask(task.id, feature.id); setTaskMenu(null) }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-white/5"
-                              >
-                                <Trash2 size={11} /> Delete
-                              </button>
-                            </div>
-                          )}
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Add task input */}
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/5">
-                      <input
-                        type="text"
-                        value={newTaskText[feature.id] || ""}
-                        onChange={(e) => setNewTaskText((prev) => ({ ...prev, [feature.id]: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(feature.id) }}
-                        placeholder="Add a task..."
-                        className="flex-1 bg-transparent text-xs text-white placeholder-white/20 focus:outline-none"
-                      />
-                      {(newTaskText[feature.id]?.trim() || "") && (
-                        <button onClick={() => handleAddTask(feature.id)}
-                          className="text-[11px] text-white/40 hover:text-white font-medium shrink-0">
-                          Add
-                        </button>
-                      )}
-                    </div>
+                      )
+                    })}
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </div>
 
@@ -462,6 +485,57 @@ const Project = () => {
                   {creatingFeature ? (
                     <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
                   ) : "Create Feature"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Add Task modal */}
+      {showAddTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowAddTask(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-md bg-foreground border border-white/10 rounded-2xl p-6 sm:p-8"
+          >
+            <button onClick={() => setShowAddTask(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white">
+              <X size={18} />
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-white/5 rounded-lg"><ListChecks size={18} /></div>
+              <h2 className="text-lg font-semibold">Add Task</h2>
+            </div>
+            <form onSubmit={handleAddTask} className="space-y-4">
+              <div>
+                <label className="text-sm text-white/60 mb-1.5 block">Feature</label>
+                <select value={newTaskFeature}
+                  onChange={(e) => setNewTaskFeature(e.target.value)}
+                  className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white focus:outline-none focus:border-white/30 transition-all appearance-none cursor-pointer"
+                  required>
+                  {features.map((f) => (
+                    <option key={f.id} value={f.id} className="bg-foreground">{f.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-white/60 mb-1.5 block">Task name</label>
+                <input type="text" value={newTaskName}
+                  onChange={(e) => setNewTaskName(e.target.value)}
+                  placeholder="Implement login endpoint"
+                  className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all" required />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddTask(false)}
+                  className="flex-1 py-2.5 rounded-lg text-sm border border-white/10 hover:bg-white/5 transition-all">Cancel</button>
+                <button type="submit" disabled={creatingTask}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-white text-background hover:bg-white/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  {creatingTask ? (
+                    <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                  ) : "Add Task"}
                 </button>
               </div>
             </form>

@@ -37,13 +37,18 @@ const Auth = () => {
         setForm({ username: "", email: "", password: "" });
       }
     } catch (err) {
-      const message =
-        err.response?.data?.detail ||
-        err.response?.data?.email?.[0] ||
-        err.response?.data?.username?.[0] ||
-        err.response?.data?.password?.[0] ||
-        "Something went wrong. Please try again.";
-      toast.error(message);
+      if (!err.response) {
+        toast.error("Cannot reach server. Make sure the backend is running on port 8000.");
+      } else {
+        const message =
+          err.response?.data?.detail ||
+          err.response?.data?.email?.[0] ||
+          err.response?.data?.username?.[0] ||
+          err.response?.data?.password?.[0] ||
+          err.response?.data?.non_field_errors?.[0] ||
+          "Something went wrong. Please try again.";
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }

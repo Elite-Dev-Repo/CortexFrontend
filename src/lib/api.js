@@ -1,7 +1,7 @@
 import axios from "axios"
 import { ACCESS, REFRESH } from "./constants"
 
-const BASE_URL = import.meta.env.VITE_BASE_URL
+const BASE_URL = import.meta.env.VITE_BASE_URL || "http://127.0.0.1:8000/api"
 
 const api = axios.create({
   baseURL: BASE_URL,

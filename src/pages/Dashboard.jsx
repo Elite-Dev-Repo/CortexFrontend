@@ -1,61 +1,75 @@
-import React, { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { motion } from "framer-motion"
-import { Blocks, Plus, Folder, X, LogOut, LayoutDashboard, Menu, Settings, Users, BarChart3 } from "lucide-react"
-import { toast } from "sonner"
-import { ACCESS } from "@/lib/constants"
-import { getWorkspaces, createWorkspace } from "@/lib/workspacesApi"
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  Blocks,
+  Plus,
+  Folder,
+  X,
+  LogOut,
+  LayoutDashboard,
+  Menu,
+  Settings,
+  Users,
+  BarChart3,
+} from "lucide-react";
+import { toast } from "sonner";
+import { ACCESS } from "@/lib/constants";
+import { getWorkspaces, createWorkspace } from "@/lib/workspacesApi";
 
 const Dashboard = () => {
-  const navigate = useNavigate()
-  const [workspaces, setWorkspaces] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [form, setForm] = useState({ name: "", description: "" })
-  const [creating, setCreating] = useState(false)
+  const navigate = useNavigate();
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", description: "" });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem(ACCESS)) {
-      navigate("/auth")
-      return
+      navigate("/auth");
+      return;
     }
-    fetchWorkspaces()
-  }, [])
+    fetchWorkspaces();
+  }, []);
 
   const fetchWorkspaces = async () => {
     try {
-      const data = await getWorkspaces()
-      setWorkspaces(data)
+      const data = await getWorkspaces();
+      setWorkspaces(data);
     } catch {
-      toast.error("Failed to load workspaces")
+      toast.error("Failed to load workspaces");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCreate = async (e) => {
-    e.preventDefault()
-    setCreating(true)
+    e.preventDefault();
+    setCreating(true);
     try {
-      const workspace = await createWorkspace(form)
-      setWorkspaces((prev) => [workspace, ...prev])
-      setShowCreate(false)
-      setForm({ name: "", description: "" })
-      toast.success("Workspace created")
+      const workspace = await createWorkspace(form);
+      setWorkspaces((prev) => [workspace, ...prev]);
+      setShowCreate(false);
+      setForm({ name: "", description: "" });
+      toast.success("Workspace created");
     } catch (err) {
-      const msg = err.response?.data?.name?.[0] || err.response?.data?.detail || "Failed to create workspace"
-      toast.error(msg)
+      const msg =
+        err.response?.data?.name?.[0] ||
+        err.response?.data?.detail ||
+        "Failed to create workspace";
+      toast.error(msg);
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
-  }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem(ACCESS)
-    localStorage.removeItem("refresh")
-    navigate("/auth")
-  }
+    localStorage.removeItem(ACCESS);
+    localStorage.removeItem("refresh");
+    navigate("/auth");
+  };
 
   return (
     <div className="min-h-screen bg-background text-white flex">
@@ -79,7 +93,9 @@ const Dashboard = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          <div className="text-[11px] text-white/20 uppercase tracking-wider px-4 mb-2">Main</div>
+          <div className="text-[11px] text-white/20 uppercase tracking-wider px-4 mb-2">
+            Main
+          </div>
           <button
             onClick={() => setSidebarOpen(false)}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white/10 text-sm font-medium"
@@ -90,12 +106,17 @@ const Dashboard = () => {
 
           {workspaces.length > 0 && (
             <>
-              <div className="text-[11px] text-white/20 uppercase tracking-wider px-4 mb-2 mt-4">Workspaces</div>
+              <div className="text-[11px] text-white/70 uppercase tracking-wider px-4 mb-2 mt-4">
+                Workspaces
+              </div>
               {workspaces.slice(0, 5).map((ws) => (
                 <button
                   key={ws.id}
-                  onClick={() => { navigate(`/workspace/${ws.id}`); setSidebarOpen(false) }}
-                  className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                  onClick={() => {
+                    navigate(`/workspace/${ws.id}`);
+                    setSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition-all"
                 >
                   <Folder size={14} />
                   <span className="truncate">{ws.name}</span>
@@ -104,23 +125,25 @@ const Dashboard = () => {
             </>
           )}
 
-          <div className="text-[11px] text-white/20 uppercase tracking-wider px-4 mb-2 mt-4">General</div>
+          <div className="text-[11px] text-white/60 uppercase tracking-wider px-4 mb-2 mt-4">
+            General
+          </div>
           <button
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all cursor-not-allowed opacity-50"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition-all cursor-not-allowed opacity-50"
             disabled
           >
             <Users size={18} />
             Team
           </button>
           <button
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all cursor-not-allowed opacity-50"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition-all cursor-not-allowed opacity-50"
             disabled
           >
             <BarChart3 size={18} />
             Analytics
           </button>
           <button
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/5 transition-all cursor-not-allowed opacity-50"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/80 hover:text-white hover:bg-white/5 transition-all cursor-not-allowed opacity-50"
             disabled
           >
             <Settings size={18} />
@@ -207,7 +230,10 @@ const Dashboard = () => {
                     {ws.projects && (
                       <>
                         <span>·</span>
-                        <span>{ws.projects.length} project{ws.projects.length !== 1 ? "s" : ""}</span>
+                        <span>
+                          {ws.projects.length} project
+                          {ws.projects.length !== 1 ? "s" : ""}
+                        </span>
                       </>
                     )}
                   </div>
@@ -221,7 +247,10 @@ const Dashboard = () => {
       {/* Create workspace modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowCreate(false)} />
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowCreate(false)}
+          />
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -243,21 +272,29 @@ const Dashboard = () => {
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">Name</label>
+                <label className="text-sm text-white/60 mb-1.5 block">
+                  Name
+                </label>
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, name: e.target.value }))
+                  }
                   placeholder="My Workspace"
                   className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">Description (optional)</label>
+                <label className="text-sm text-white/60 mb-1.5 block">
+                  Description (optional)
+                </label>
                 <textarea
                   value={form.description}
-                  onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, description: e.target.value }))
+                  }
                   placeholder="What's this workspace about?"
                   rows={3}
                   className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all resize-none"
@@ -288,7 +325,7 @@ const Dashboard = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;
