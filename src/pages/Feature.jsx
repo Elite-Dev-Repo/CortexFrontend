@@ -8,15 +8,6 @@ import { getFeature, deleteFeature } from "@/lib/featuresApi";
 import { createTask, updateTask, deleteTask } from "@/lib/tasksApi";
 import Columns from "@/components/Columns";
 
-const STATUS_ORDER = ["pending", "in_progress", "completed"];
-
-function getNextStatus(current) {
-  const idx = STATUS_ORDER.indexOf(current);
-  return idx < STATUS_ORDER.length - 1
-    ? STATUS_ORDER[idx + 1]
-    : STATUS_ORDER[0];
-}
-
 const Feature = () => {
   const { uuid, projectUuid, featureUuid } = useParams();
   const navigate = useNavigate();
@@ -70,11 +61,10 @@ const Feature = () => {
     }
   };
 
-  const handleUpdateStatus = async (task) => {
-    const newStatus = getNextStatus(task.status);
+  const handleStatusChange = async (taskId, newStatus) => {
     try {
-      const updated = await updateTask(task.id, { status: newStatus });
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      const updated = await updateTask(taskId, { status: newStatus });
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
     } catch {
       toast.error("Failed to update task");
     }
@@ -184,7 +174,7 @@ const Feature = () => {
 
         <Columns
           tasks={tasks}
-          onUpdateStatus={handleUpdateStatus}
+          onStatusChange={handleStatusChange}
           onDelete={handleDeleteTask}
           taskMenu={taskMenu}
           setTaskMenu={setTaskMenu}

@@ -1,6 +1,6 @@
 import TaskCard from "./TaskCard"
 
-const Tasks = ({ tasks, onUpdateStatus, onDelete, taskMenu, setTaskMenu }) => {
+const Tasks = ({ tasks, onDelete, taskMenu, setTaskMenu }) => {
   if (tasks.length === 0) {
     return (
       <div className="flex items-center justify-center h-20 text-xs text-white/20">
@@ -14,7 +14,6 @@ const Tasks = ({ tasks, onUpdateStatus, onDelete, taskMenu, setTaskMenu }) => {
         <TaskCard
           key={task.id}
           task={task}
-          onUpdateStatus={onUpdateStatus}
           onDelete={onDelete}
           taskMenu={taskMenu}
           setTaskMenu={setTaskMenu}
