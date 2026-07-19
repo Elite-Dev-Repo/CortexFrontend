@@ -1,7 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Blocks, Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react";
+import {
+  Blocks,
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { login, register } from "@/lib/authApi";
 
@@ -38,7 +46,7 @@ const Auth = () => {
       }
     } catch (err) {
       if (!err.response) {
-        toast.error("Cannot reach server. Make sure the backend is running on port 8000.");
+        toast.error("server unavailable.");
       } else {
         const message =
           err.response?.data?.detail ||
@@ -73,13 +81,19 @@ const Auth = () => {
 
           <div className="flex bg-background rounded-lg p-1 mb-8">
             <button
-              onClick={() => { setMode("login"); setForm({ username: "", email: "", password: "" }); }}
+              onClick={() => {
+                setMode("login");
+                setForm({ username: "", email: "", password: "" });
+              }}
               className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === "login" ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
             >
               Sign In
             </button>
             <button
-              onClick={() => { setMode("signup"); setForm({ username: "", email: "", password: "" }); }}
+              onClick={() => {
+                setMode("signup");
+                setForm({ username: "", email: "", password: "" });
+              }}
               className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === "signup" ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
             >
               Sign Up
@@ -98,9 +112,14 @@ const Auth = () => {
             >
               {mode === "signup" && (
                 <div>
-                  <label className="text-sm text-white/60 mb-1.5 block">Username</label>
+                  <label className="text-sm text-white/60 mb-1.5 block">
+                    Username
+                  </label>
                   <div className="relative">
-                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                    <User
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                    />
                     <input
                       type="text"
                       name="username"
@@ -115,9 +134,14 @@ const Auth = () => {
               )}
 
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">Email</label>
+                <label className="text-sm text-white/60 mb-1.5 block">
+                  Email
+                </label>
                 <div className="relative">
-                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Mail
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                  />
                   <input
                     type="email"
                     name="email"
@@ -131,9 +155,14 @@ const Auth = () => {
               </div>
 
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">Password</label>
+                <label className="text-sm text-white/60 mb-1.5 block">
+                  Password
+                </label>
                 <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                  <Lock
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                  />
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
@@ -172,14 +201,22 @@ const Auth = () => {
                 {mode === "login" ? (
                   <>
                     Don't have an account?{" "}
-                    <button type="button" onClick={toggleMode} className="text-white hover:underline">
+                    <button
+                      type="button"
+                      onClick={toggleMode}
+                      className="text-white hover:underline"
+                    >
                       Sign up
                     </button>
                   </>
                 ) : (
                   <>
                     Already have an account?{" "}
-                    <button type="button" onClick={toggleMode} className="text-white hover:underline">
+                    <button
+                      type="button"
+                      onClick={toggleMode}
+                      className="text-white hover:underline"
+                    >
                       Sign in
                     </button>
                   </>
