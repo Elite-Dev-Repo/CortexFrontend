@@ -2,8 +2,10 @@ import React from "react";
 import HeroImage from "../assets/cortex-hero-.png";
 import { ArrowRight, Blocks, MoveRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { ACCESS } from "@/lib/constants";
 
 const Header = () => {
+  const token = localStorage.getItem(ACCESS);
   const navLinks = [
     {
       name: "Platform",
@@ -18,8 +20,8 @@ const Header = () => {
       route: "/",
     },
     {
-      name: "Sign In",
-      route: "/auth",
+      name: token ? "Dashboard" : "Sign In",
+      route: token ? "/dashboard" : "/auth",
     },
   ];
 
@@ -43,7 +45,7 @@ const Header = () => {
                 return (
                   <a
                     href={link.route}
-                    className={`hover:bg-white/5 text-sm px-4 py-2 rounded-sm ${link.name == "Sign In" ? "bg-white text-background font-semibold" : ""}`}
+                    className={`hover:bg-white/5 text-sm px-4 py-2 rounded-sm ${link.name == "Sign In" || link.name == "Dashboard" ? "bg-white text-background font-semibold hover:text-white" : ""}`}
                   >
                     <li>{link.name}</li>
                   </a>

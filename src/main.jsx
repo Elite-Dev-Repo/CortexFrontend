@@ -8,6 +8,8 @@ import Auth from "./pages/Auth.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Workspace from "./pages/Workspace.jsx";
 import Project from "./pages/Project.jsx";
+import Feature from "./pages/Feature.jsx";
+import ProtectedRoutes from "./components/ProtectedRoutes";
 
 const router = createBrowserRouter([
   {
@@ -19,16 +21,25 @@ const router = createBrowserRouter([
     element: <Auth />,
   },
   {
-    path: "/dashboard",
-    element: <Dashboard />,
-  },
-  {
-    path: "/workspace/:uuid",
-    element: <Workspace />,
-  },
-  {
-    path: "/workspace/:uuid/project/:projectUuid",
-    element: <Project />,
+    element: <ProtectedRoutes />,
+    children: [
+      {
+        path: "/dashboard",
+        element: <Dashboard />,
+      },
+      {
+        path: "/workspace/:uuid",
+        element: <Workspace />,
+      },
+      {
+        path: "/workspace/:uuid/project/:projectUuid",
+        element: <Project />,
+      },
+      {
+        path: "/workspace/:uuid/project/:projectUuid/feature/:featureUuid",
+        element: <Feature />,
+      },
+    ],
   },
 ]);
 
