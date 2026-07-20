@@ -63,9 +63,9 @@ const Auth = () => {
   };
 
   return (
-    <div className="bg-background w-screen min-h-screen text-white flex items-center justify-center overflow-hidden relative">
-      <div className="absolute w-100 h-100 bg-white/5 rounded-full top-0 right-0 blur-3xl" />
-      <div className="absolute w-80 h-80 bg-white/5 rounded-full bottom-0 left-0 blur-3xl" />
+    <div className="bg-background w-full min-h-screen text-white flex items-center justify-center overflow-hidden relative px-4">
+      <div className="absolute w-60 h-60 md:w-100 md:h-100 bg-white/5 rounded-full top-0 right-0 blur-3xl pointer-events-none" />
+      <div className="absolute w-60 h-60 md:w-80 md:h-80 bg-white/5 rounded-full bottom-0 left-0 blur-3xl pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -73,8 +73,8 @@ const Auth = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md mx-auto z-10"
       >
-        <div className="bg-foreground/80 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
-          <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="bg-foreground/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-white/10">
+          <div className="flex items-center justify-center gap-2 mb-6 sm:mb-8">
             <Blocks size={24} className="text-white" />
             <span className="text-xl tracking-wider font-light">Cortex</span>
           </div>

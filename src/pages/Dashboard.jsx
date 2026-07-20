@@ -121,7 +121,7 @@ const Dashboard = () => {
 
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
+            className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
           >
             <Plus size={16} />
             <span className="hidden sm:inline">New Workspace</span>

@@ -30,14 +30,14 @@ const Faq = () => {
   const toggle = (i) => setOpenIndex(openIndex === i ? null : i);
 
   return (
-    <section className="w-full min-h-screen bg-background py-24">
+    <section className="w-full min-h-screen bg-background py-16 lg:py-24">
       <div className="cont w-full h-full">
-        <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-20">
-          <div className="lg:sticky lg:top-24 flex flex-col items-start gap-3 flex-1 shrink-0 max-w-sm">
+        <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-20">
+          <div className="lg:sticky lg:top-24 flex flex-col items-start gap-3 w-full lg:max-w-sm">
             <span className="text-xs uppercase tracking-[0.3em] text-white/40">
               Questions
             </span>
-            <h2 className="text-4xl md:text-5xl font-semibold text-white leading-tight">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white leading-tight">
               Frequently asked <br /> questions
             </h2>
             <p className="text-white/60 text-sm leading-relaxed mt-2">
@@ -54,9 +54,9 @@ const Faq = () => {
               >
                 <button
                   onClick={() => toggle(i)}
-                  className="w-full flex items-center justify-between p-5 text-left text-white font-medium cursor-pointer"
+                  className="w-full flex items-center justify-between p-4 lg:p-5 text-left text-white font-medium text-sm lg:text-base cursor-pointer"
                 >
-                  {faq.q}
+                  <span className="pr-2">{faq.q}</span>
                   <ChevronDown
                     size={18}
                     className={`text-white/60 transition-transform duration-300 shrink-0 ${
@@ -66,9 +66,9 @@ const Faq = () => {
                 </button>
                 <div
                   className={`overflow-hidden transition-all duration-300 ${
-                    openIndex === i ? "max-h-80" : "max-h-0"
+                    openIndex === i ? "max-h-96" : "max-h-0"
                   }`}>
-                  <p className="px-5 pb-5 text-sm text-white/60 leading-relaxed">
+                  <p className="px-4 lg:px-5 pb-4 lg:pb-5 text-xs lg:text-sm text-white/60 leading-relaxed">
                     {faq.a}
                   </p>
                 </div>

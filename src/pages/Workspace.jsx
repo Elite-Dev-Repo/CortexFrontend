@@ -152,23 +152,23 @@ const Workspace = () => {
 
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 lg:px-8 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg"
+              className="lg:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg shrink-0"
             >
               <Menu size={20} />
             </button>
             <button
               onClick={() => navigate("/dashboard")}
-              className="p-2 -ml-2 hover:bg-white/5 rounded-lg hidden sm:block"
+              className="p-2 -ml-2 hover:bg-white/5 rounded-lg hidden sm:block shrink-0"
             >
               <ArrowLeft size={18} />
             </button>
-            <h1 className="text-lg font-semibold truncate max-w-[200px] sm:max-w-md">{workspace?.name}</h1>
+            <h1 className="text-lg font-semibold truncate">{workspace?.name}</h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setEditing(true)}
               className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white"
@@ -177,7 +177,7 @@ const Workspace = () => {
             </button>
             <button
               onClick={() => setShowCreateProject(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
+              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
             >
               <Plus size={16} />
               <span className="hidden sm:inline">New Project</span>

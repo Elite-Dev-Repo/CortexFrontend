@@ -158,7 +158,7 @@ const Feature = () => {
       )}
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto p-4 lg:p-8">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
             Tasks{" "}
@@ -166,7 +166,7 @@ const Feature = () => {
           </h2>
           <button
             onClick={() => setShowAddTask(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all whitespace-nowrap"
           >
             <Plus size={14} /> Add Task
           </button>

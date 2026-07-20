@@ -10,7 +10,7 @@ const StatusColumn = ({ column, tasks, onDelete, taskMenu, setTaskMenu }) => {
   return (
     <div
       ref={ref}
-      className={`flex-1 min-w-[250px] border bg-primary ${column.border} rounded-xl flex flex-col transition-all ${isDropTarget ? "ring-2 ring-white/20 bg-white/5" : ""} overflow-hidden`}
+      className={`w-full lg:flex-1 lg:min-w-[250px] border bg-primary ${column.border} rounded-xl flex flex-col transition-all ${isDropTarget ? "ring-2 ring-white/20 bg-white/5" : ""} overflow-hidden`}
     >
       <div
         className={`flex items-center justify-between px-4 py-3 ${column.color}`}

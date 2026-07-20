@@ -51,7 +51,7 @@ const Columns = ({
 
   return (
     <DragDropProvider onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 h-full min-h-[400px]">
+      <div className="flex flex-col lg:flex-row gap-4 h-full min-h-[400px]">
         {STATUS_COLUMNS.map((col) => (
           <StatusColumn
             key={col.key}

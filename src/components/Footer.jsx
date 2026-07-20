@@ -18,13 +18,13 @@ const footerLinks = [
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-background border-t border-white/5 py-16">
+    <footer className="w-full bg-background border-t border-white/5 py-12 lg:py-16">
       <div className="cont w-full h-full">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-          <div className="col-span-2 md:col-span-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8 mb-10 lg:mb-12">
+          <div className="sm:col-span-2 md:col-span-1">
             <a
               href="/"
-              className="tracking-wider flex items-center gap-2 font-light text-white mb-4"
+              className="tracking-wider flex items-center gap-2 font-light text-white mb-3 lg:mb-4"
             >
               <Blocks size={22} />
               Cortex
@@ -36,10 +36,10 @@ const Footer = () => {
           </div>
           {footerLinks.map((group) => (
             <div key={group.heading}>
-              <h4 className="text-white text-sm font-semibold mb-4">
+              <h4 className="text-white text-sm font-semibold mb-3 lg:mb-4">
                 {group.heading}
               </h4>
-              <ul className="flex flex-col gap-2">
+              <ul className="flex flex-col gap-1.5 lg:gap-2">
                 {group.links.map((link) => (
                   <li key={link}>
                     <a
@@ -54,11 +54,11 @@ const Footer = () => {
             </div>
           ))}
         </div>
-        <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-white/30">
+        <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-3 lg:gap-4">
+          <p className="text-xs text-white/30 text-center md:text-left">
             &copy; {new Date().getFullYear()} Cortex. All rights reserved.
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 lg:gap-6">
             <a href="/" className="text-xs text-white/30 hover:text-white/60 transition-colors">
               Privacy Policy
             </a>

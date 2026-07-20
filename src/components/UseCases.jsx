@@ -31,13 +31,13 @@ const useCases = [
 
 const UseCases = () => {
   return (
-    <section className="w-full min-h-screen bg-background py-24">
-      <div className="cont w-full h-full flex items-start justify-between gap-16">
-        <div className="sticky top-24 flex flex-col items-start gap-3 flex-1">
+    <section className="w-full min-h-screen bg-background py-16 lg:py-24">
+      <div className="cont w-full h-full flex flex-col lg:flex-row items-start justify-between gap-10 lg:gap-16">
+        <div className="lg:sticky lg:top-24 flex flex-col items-start gap-3 w-full lg:flex-1">
           <span className="text-xs uppercase tracking-[0.3em] text-white/40">
             Real world
           </span>
-          <h2 className="text-4xl md:text-5xl font-semibold text-white">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white">
             Use cases
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mt-2 max-w-xs">
@@ -46,7 +46,7 @@ const UseCases = () => {
           </p>
         </div>
 
-        <div className="flex flex-col gap-6 w-full flex-1">
+        <div className="flex flex-col gap-4 lg:gap-6 w-full lg:flex-1">
           {useCases.map((item, index) => {
             const Icon = item.icon;
             return (
@@ -60,16 +60,16 @@ const UseCases = () => {
                   delay: index * 0.15,
                   ease: "easeOut",
                 }}
-                className="bg-primary rounded-2xl p-8 flex items-start gap-6 ring-1 ring-white/5 hover:ring-white/10 transition-[ring] duration-300 will-change-transform"
+                className="bg-primary rounded-2xl p-5 lg:p-8 flex items-start gap-4 lg:gap-6 ring-1 ring-white/5 hover:ring-white/10 transition-[ring] duration-300 will-change-transform"
               >
-                <span className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                  <Icon size={22} className="text-white" />
+                <span className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                  <Icon size={20} className="text-white" />
                 </span>
                 <div>
-                  <h3 className="text-white text-lg font-semibold mb-2">
+                  <h3 className="text-white text-base lg:text-lg font-semibold mb-1 lg:mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-white/60 text-sm leading-relaxed">
+                  <p className="text-white/60 text-xs lg:text-sm leading-relaxed">
                     {item.description}
                   </p>
                 </div>
