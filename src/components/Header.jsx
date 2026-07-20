@@ -45,7 +45,7 @@ const Header = () => {
                 <a
                   key={link.name}
                   href={link.route}
-                  className={`text-xs lg:text-sm px-2 lg:px-4 py-1.5 lg:py-2 rounded-sm whitespace-nowrap ${link.name == "Sign In" || link.name == "Dashboard" ? "bg-white text-background font-semibold hover:text-white" : "hover:bg-white/5"}`}
+                  className={`text-xs lg:text-sm px-2 lg:px-4 py-1.5 lg:py-2 rounded-sm whitespace-nowrap ${link.name == "Sign In" || link.name == "Dashboard" ? "bg-white text-background font-semibold hover:text-primary" : "hover:bg-white/5"}`}
                 >
                   <li>{link.name}</li>
                 </a>
