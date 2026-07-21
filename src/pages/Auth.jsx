@@ -135,212 +135,212 @@ const Auth = () => {
 
           <AnimatePresence mode="wait">
             {mode !== "verify" ? (
-            <motion.form
-              key={mode}
-              initial={{ opacity: 0, x: mode === "login" ? -20 : 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: mode === "login" ? 20 : -20 }}
-              transition={{ duration: 0.2 }}
-              onSubmit={handleSubmit}
-              className="space-y-4"
-            >
-              {mode === "signup" && (
+              <motion.form
+                key={mode}
+                initial={{ opacity: 0, x: mode === "login" ? -20 : 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: mode === "login" ? 20 : -20 }}
+                transition={{ duration: 0.2 }}
+                onSubmit={handleSubmit}
+                className="space-y-4"
+              >
+                {mode === "signup" && (
+                  <div>
+                    <label className="text-sm text-white/60 mb-1.5 block">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <User
+                        size={16}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                      />
+                      <input
+                        type="text"
+                        name="username"
+                        value={form.username}
+                        onChange={handleChange}
+                        placeholder="johndoe"
+                        className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-sm text-white/60 mb-1.5 block">
-                    Username
+                    Email
                   </label>
                   <div className="relative">
-                    <User
+                    <Mail
                       size={16}
                       className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
                     />
                     <input
-                      type="text"
-                      name="username"
-                      value={form.username}
+                      type="email"
+                      name="email"
+                      value={form.email}
                       onChange={handleChange}
-                      placeholder="johndoe"
+                      placeholder="you@example.com"
                       className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
                       required
                     />
                   </div>
                 </div>
-              )}
 
-              <div>
-                <label className="text-sm text-white/60 mb-1.5 block">
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                  />
-                  <input
-                    type="email"
-                    name="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="you@example.com"
-                    className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm text-white/60 mb-1.5 block">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                  />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    {mode === "login" ? "Sign In" : "Create Account"}
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-sm text-white/40">
-                {mode === "login" ? (
-                  <>
-                    Don't have an account?{" "}
+                <div>
+                  <label className="text-sm text-white/60 mb-1.5 block">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
+                    />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={form.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
+                      required
+                    />
                     <button
                       type="button"
-                      onClick={toggleMode}
-                      className="text-white hover:underline"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
                     >
-                      Sign up
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
-                  </>
-                ) : mode === "signup" ? (
-                  <>
-                    Already have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={toggleMode}
-                      className="text-white hover:underline"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                ) : null}
-              </p>
-            </motion.form>
-          ) : (
-            <motion.div
-              key="verify"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              <div className="text-center space-y-2">
-                <ShieldCheck size={40} className="mx-auto text-white/80" />
-                <h3 className="text-lg font-semibold">Verify your email</h3>
-                <p className="text-sm text-white/50">
-                  Enter the 6-digit code sent to{" "}
-                  <span className="text-white/80">{form.email}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      {mode === "login" ? "Sign In" : "Create Account"}
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
+
+                <p className="text-center text-sm text-white/40">
+                  {mode === "login" ? (
+                    <>
+                      Don't have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={toggleMode}
+                        className="text-white hover:underline"
+                      >
+                        Sign up
+                      </button>
+                    </>
+                  ) : mode === "signup" ? (
+                    <>
+                      Already have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={toggleMode}
+                        className="text-white hover:underline"
+                      >
+                        Sign in
+                      </button>
+                    </>
+                  ) : null}
                 </p>
-              </div>
-
-              <div>
-                <label className="text-sm text-white/60 mb-1.5 block">
-                  Verification Code
-                </label>
-                <input
-                  type="text"
-                  name="otp"
-                  value={otp}
-                  onChange={handleOtpChange}
-                  placeholder="000000"
-                  maxLength={6}
-                  className="w-full bg-background border border-white/10 rounded-lg py-3 text-center text-xl tracking-[0.5em] text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-all font-mono"
-                  autoComplete="one-time-code"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading || otp.length !== 6}
-                className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              </motion.form>
+            ) : (
+              <motion.div
+                key="verify"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
               >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    Verify Email
-                    <ShieldCheck size={16} />
-                  </>
-                )}
-              </button>
+                <div className="text-center space-y-2">
+                  <ShieldCheck size={40} className="mx-auto text-white/80" />
+                  <h3 className="text-lg font-semibold">Verify your email</h3>
+                  <p className="text-sm text-white/50">
+                    Enter the 6-digit code sent to{" "}
+                    <span className="text-white/80">{form.email}</span>
+                  </p>
+                </div>
 
-              <button
-                type="button"
-                onClick={handleResendOtp}
-                disabled={resending}
-                className="w-full bg-transparent border border-white/10 text-white/60 hover:text-white hover:border-white/30 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {resending ? (
-                  <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <RefreshCw size={14} />
-                    Resend Code
-                  </>
-                )}
-              </button>
+                <div>
+                  <label className="text-sm text-white/60 mb-1.5 block">
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    name="otp"
+                    value={otp}
+                    onChange={handleOtpChange}
+                    placeholder="00ea2"
+                    maxLength={6}
+                    className="w-full bg-background border border-white/10 rounded-lg py-3 text-center text-xl tracking-[0.5em] text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-all font-mono"
+                    autoComplete="one-time-code"
+                  />
+                </div>
 
-              <p className="text-center text-sm text-white/40">
                 <button
                   type="button"
-                  onClick={() => {
-                    setMode("login");
-                    setOtp("");
-                  }}
-                  className="text-white hover:underline"
+                  onClick={handleSubmit}
+                  disabled={loading || otp.length !== 6}
+                  className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Back to sign in
+                  {loading ? (
+                    <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      Verify Email
+                      <ShieldCheck size={16} />
+                    </>
+                  )}
                 </button>
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
-  </div>
+
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resending}
+                  className="w-full bg-transparent border border-white/10 text-white/60 hover:text-white hover:border-white/30 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resending ? (
+                    <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw size={14} />
+                      Resend Code
+                    </>
+                  )}
+                </button>
+
+                <p className="text-center text-sm text-white/40">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode("login");
+                      setOtp("");
+                    }}
+                    className="text-white hover:underline"
+                  >
+                    Back to sign in
+                  </button>
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 
