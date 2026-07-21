@@ -9,24 +9,34 @@ import {
   Lock,
   User,
   ArrowRight,
+  ShieldCheck,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { login, register } from "@/lib/authApi";
+import { login, register, verifyEmail, resendOtp } from "@/lib/authApi";
 
 const Auth = () => {
   const [mode, setMode] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [otp, setOtp] = useState("");
+  const [resending, setResending] = useState(false);
   const navigate = useNavigate();
 
   const toggleMode = () => {
     setMode((prev) => (prev === "login" ? "signup" : "login"));
     setForm({ username: "", email: "", password: "" });
+    setOtp("");
   };
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleOtpChange = (e) => {
+    const val = e.target.value.replace(/\s/g, "");
+    if (val.length <= 6) setOtp(val);
   };
 
   const handleSubmit = async (e) => {
@@ -38,10 +48,15 @@ const Auth = () => {
         await login(form.email, form.password);
         toast.success("Welcome back!");
         navigate("/dashboard");
-      } else {
+      } else if (mode === "signup") {
         await register(form.username, form.email, form.password);
-        toast.success("Account created! Sign in to continue.");
+        toast.success("Verification code sent to your email.");
+        setMode("verify");
+      } else {
+        await verifyEmail(otp);
+        toast.success("Email verified! Sign in to continue.");
         setMode("login");
+        setOtp("");
         setForm({ username: "", email: "", password: "" });
       }
     } catch (err) {
@@ -54,11 +69,29 @@ const Auth = () => {
           err.response?.data?.username?.[0] ||
           err.response?.data?.password?.[0] ||
           err.response?.data?.non_field_errors?.[0] ||
+          err.response?.data?.error?.[0] ||
+          err.response?.data?.error ||
           "Something went wrong. Please try again.";
         toast.error(message);
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setResending(true);
+    try {
+      await resendOtp(form.email);
+      toast.success("New code sent to your email.");
+    } catch (err) {
+      if (err.response?.data?.error) {
+        toast.error(err.response.data.error);
+      } else {
+        toast.error("Failed to resend code. Try again.");
+      }
+    } finally {
+      setResending(false);
     }
   };
 
@@ -101,6 +134,7 @@ const Auth = () => {
           </div>
 
           <AnimatePresence mode="wait">
+            {mode !== "verify" ? (
             <motion.form
               key={mode}
               initial={{ opacity: 0, x: mode === "login" ? -20 : 20 }}
@@ -209,7 +243,7 @@ const Auth = () => {
                       Sign up
                     </button>
                   </>
-                ) : (
+                ) : mode === "signup" ? (
                   <>
                     Already have an account?{" "}
                     <button
@@ -220,13 +254,93 @@ const Auth = () => {
                       Sign in
                     </button>
                   </>
-                )}
+                ) : null}
               </p>
             </motion.form>
-          </AnimatePresence>
-        </div>
-      </motion.div>
-    </div>
+          ) : (
+            <motion.div
+              key="verify"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <ShieldCheck size={40} className="mx-auto text-white/80" />
+                <h3 className="text-lg font-semibold">Verify your email</h3>
+                <p className="text-sm text-white/50">
+                  Enter the 6-digit code sent to{" "}
+                  <span className="text-white/80">{form.email}</span>
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm text-white/60 mb-1.5 block">
+                  Verification Code
+                </label>
+                <input
+                  type="text"
+                  name="otp"
+                  value={otp}
+                  onChange={handleOtpChange}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-full bg-background border border-white/10 rounded-lg py-3 text-center text-xl tracking-[0.5em] text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-all font-mono"
+                  autoComplete="one-time-code"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading || otp.length !== 6}
+                className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    Verify Email
+                    <ShieldCheck size={16} />
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resending}
+                className="w-full bg-transparent border border-white/10 text-white/60 hover:text-white hover:border-white/30 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resending ? (
+                  <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw size={14} />
+                    Resend Code
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-sm text-white/40">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login");
+                    setOtp("");
+                  }}
+                  className="text-white hover:underline"
+                >
+                  Back to sign in
+                </button>
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  </div>
   );
 };
 
