@@ -32,7 +32,7 @@ const Header = () => {
           </div>
 
           <div className="hidden lg:flex min-w-0 flex-1 bg-foreground rounded-lg p-1 z-20">
-            <ul className="flex items-center justify-between px-4 gap-1">
+            <ul className="w-full flex items-center justify-between px-4 ">
               {navLinks.map((link) => (
                 <a
                   key={link.name}
