@@ -1,0 +1,74 @@
+Why nodes are NOT draggable - Root Causes
+----------------------------------------
+
+1. Missing React Flow stylesheet - PRIMARY CAUSE
+   - src/pages/Project.jsx:25-34, src/main.jsx:1-5, src/index.css:1-5
+   - Never imported "@xyflow/react/dist/style.css"
+   - Without it, core classes are missing:
+     .react-flow__node { position:absolute; user-select:none; cursor:grab }
+     .react-flow__pane { cursor:grab }
+     .react-flow__handle { pointer-events:all }
+   - Result: nodes render without absolute positioning, hitbox is 0x0 or misaligned, browser has no drag cursor/handlers. Nodes appear but pane captures all drag as panning, so nodes feel frozen.
+   - Fix: import "@xyflow/react/dist/style.css" in src/main.jsx or src/pages/Project.jsx
+
+2. MajorNode hijacks React Flow's transform - VISUAL HITBOX OFFSET
+   - src/components/MajorNode.jsx:5
+     <div className="relative top-20 left-1/2 transform -translate-x-1/2 ...">
+   - React Flow wraps every node in <div class="react-flow__node" style="transform: translate(x,y)">. 
+   - Adding `left-1/2` + `transform -translate-x-1/2` + `top-20` on the INNER div offsets the visual 50% + 80px away from the actual draggable wrapper's position. User drags where they SEE the node, but the draggable element is 100-200px away. Feels like "not draggable".
+   - Also `relative` without nodrag fix + `cursor-pointer` instead of `cursor-grab` masks drag affordance.
+   - Fix: Remove `relative top-20 left-1/2 transform -translate-x-1/2`. Let React Flow handle position. Use `cursor-grab active:cursor-grabbing` and no offset transforms. Added `!important` free styling in new MajorNode.jsx.
+
+3. nodeTypes recreated on every render - REMOUNT KILLS DRAG HANDLER
+   - src/pages/Project.jsx:194-197
+     const nodeTypes = { projectNode: MajorNode, featureNode: FeatureNode }
+   - Defined inside component body without useMemo. On every state update (setProject, setFeatures, etc) a new object reference is created. React Flow does shallow compare on nodeTypes; new reference => it unregisters and re-registers custom nodes, destroying the internal dnd context mid-drag. Drag start is cancelled.
+   - Docs: https://reactflow.dev/api-reference/utils/use-react-flow#nodeTypes must be memoized or defined outside component.
+   - Fix: const nodeTypes = useMemo(() => ({ projectNode: MajorNode, featureNode: FeatureNode }), [])
+
+4. useNodesState initialized with empty array + later sync anti-pattern
+   - src/pages/Project.jsx:74 + 186-201
+     const [baseNodes,setBaseNodes] = useState([])
+     const [nodes,setNodes,onNodesChange] = useNodesState(baseNodes) // baseNodes is [] at mount
+     useEffect(()=> setNodes(baseNodes), [baseNodes])
+   - Works but causes double render and race: first render nodes=[], then fetch sets baseNodes, then effect copies. Between those renders nodes are empty so no drag target. Better: useNodesState([]) and setNodes directly, or derive nodes from baseNodes via useEffect correctly. Also onNodesChange not being called if nodesDraggable false.
+   - While not blocking drag permanently, it causes flicker where nodes appear non-interactive for 1 frame.
+
+5. Container height collapse + wrong Handle position
+   - src/pages/Project.jsx:405-414
+     <div className="h-full w-full flex-1 ..."><ReactFlow className="border..."/></div>
+   - Parent is flex with `min-h-[calc(100vh-40px)]` but ReactFlow needs explicit `style={{width:'100%',height:'100%'}}` or `h-[600px]`. If flex parent collapses, ReactFlow pane is 0px height, pointer events don't reach nodes.
+   - src/components/MajorNode.jsx:7 <Handle position={Position.Bottom} /> was Bottom but should have Source at Bottom and Target at Top. FeatureNode.jsx:3 had NO Handles at all, so edges couldn't connect and drag handle hit area was missing. Fixed both to have two Handles.
+
+6. Minor: FeatureNode was placeholder
+   - src/components/FeatureNode.jsx:3 return <div>FeatureNode</div>
+   - No styling, no Handle, no data prop. Renders as unstyled text with no drag handle affordance. Users try to drag text selection not node.
+
+Summary flow:
+Missing CSS + inner transform offset = hitbox not where visual is -> pane pans instead of node drags. Even after fixing, non-memoized nodeTypes causes remount on each state change -> drag handler destroyed. After memoizing + removing inner transforms + importing stylesheet, drag works. Styled nodes in this commit add proper cursor-grab, no layout-shifting transforms, and correct Handles so both projectNode and featureNode are fully draggable.
+
+----------------------------------------
+Previous: Why node is not showing - Root Causes (kept for history)
+
+1. State desynchronization - nodes never receives fetched data
+   - src/pages/Project.jsx:70 `const [initialNode, setInitialNode] = useState([])`
+   - src/pages/Project.jsx:174 `const [nodes, setNodes] = useState(initialNode)` 
+   - Problem: `nodes` is initialized once at mount with the initial value of `initialNode` (empty array []). When `fetchInitialNodes` later calls `setInitialNode(res)` at src/pages/Project.jsx:97, `initialNode` updates but `nodes` does NOT auto-update because `useState(initialNode)` only uses the initial value on first render. There is no `useEffect` syncing `initialNode -> nodes`, so `nodes` stays `[]` forever and ReactFlow at src/pages/Project.jsx:393 renders zero nodes.
+
+2. Malformed nodes array - nested array instead of flat array
+   - src/lib/reactflowConstants.js:8-22
+     const nodes = [
+       { id: res.id, ... },
+       res.features && res.features.map(...)
+     ]
+   - `res.features.map(...)` returns an *array*. Placing it as second element without spreading creates ` [ nodeObject, [featureNode1, featureNode2] ] ` or `[ nodeObject, false ]` when no features. ReactFlow expects `Node[]` flat array, so it receives an invalid element (array/false) and ignores it.
+   - Also feature nodes at src/lib/reactflowConstants.js:18-21 are missing required fields: `position: {x,y}`, `type: "projectNode"` and `id` is not stringified. Without `position`, nodes render at (0,0) overlapping.
+
+3. Edges state undefined
+   - src/pages/Project.jsx:175 `const [edges, setEdges] = useState();` leaves `edges` as `undefined`. ReactFlow expects `edges={edges}` to be an array. Should be `useState([])`.
+
+4. Stale closure / async timing hides debugging
+   - src/pages/Project.jsx:97-98 `setInitialNode(res); console.log(initialNode);` logs stale value because state update is async.
+
+5. Minor: type mismatch for MajorNode
+   - src/components/MajorNode.jsx:3 does not destructure `{data}` from props, so even if node appears it would not display `data.name`.

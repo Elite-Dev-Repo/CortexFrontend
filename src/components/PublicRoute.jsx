@@ -1,7 +1,10 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-const ProtectedRoutes = () => {
+/**
+ * Redirect authenticated users away from public pages (e.g. /auth -> /dashboard).
+ */
+const PublicRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -12,7 +15,7 @@ const ProtectedRoutes = () => {
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/auth" replace />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 };
 
-export default ProtectedRoutes;
+export default PublicRoute;

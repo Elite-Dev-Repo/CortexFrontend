@@ -60,16 +60,16 @@ const UseCases = () => {
                   delay: index * 0.15,
                   ease: "easeOut",
                 }}
-                className="bg-primary rounded-2xl p-5 lg:p-8 flex items-start gap-4 lg:gap-6 ring-1 ring-white/5 hover:ring-white/10 transition-[ring] duration-300 will-change-transform"
+                className="bg-primary text-secondary rounded-2xl p-5 lg:p-8 flex items-start gap-4 lg:gap-6 ring-1 ring-secondary/5 hover:ring-secondary/10 transition-[ring] duration-300 will-change-transform"
               >
-                <span className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
-                  <Icon size={20} className="text-white" />
+                <span className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl bg-secondary/5 flex items-center justify-center shrink-0">
+                  <Icon size={20} className="text-secondary" />
                 </span>
                 <div>
-                  <h3 className="text-white text-base lg:text-lg font-semibold mb-1 lg:mb-2">
+                  <h3 className="text-secondary text-base lg:text-lg font-semibold mb-1 lg:mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-white/60 text-xs lg:text-sm leading-relaxed">
+                  <p className="text-secondary/60 text-xs lg:text-sm leading-relaxed">
                     {item.description}
                   </p>
                 </div>

@@ -1,19 +1,19 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import HeroImage from "../assets/cortex-hero-.png";
 import { ArrowRight, Blocks, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ACCESS } from "@/lib/constants";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
-  const token = localStorage.getItem(ACCESS);
+  const { isAuthenticated } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const navLinks = [
     { name: "Platform", route: "/" },
     { name: "Features", route: "/" },
     { name: "Use cases", route: "/" },
     {
-      name: token ? "Dashboard" : "Sign In",
-      route: token ? "/dashboard" : "/auth",
+      name: isAuthenticated ? "Dashboard" : "Sign In",
+      route: isAuthenticated ? "/dashboard" : "/auth",
     },
   ];
 
@@ -24,7 +24,7 @@ const Header = () => {
           <div className="bg-foreground text-white px-3 lg:px-4 py-1.5 lg:py-2 flex items-center rounded-sm z-20 shrink-0">
             <a
               href="/"
-              className="tracking-wider flex items-center gap-2 font-light text-sm lg:text-base"
+              className="tracking-wider flex items-center gap-2  text-sm lg:text-base"
             >
               <Blocks size={20} />
               Cortex
@@ -112,11 +112,8 @@ const Header = () => {
             href="/auth"
             className="z-1"
           >
-            <button className="pl-4 px-2 py-1.5 bg-white text-background rounded-full tracking-wider flex items-center gap-5 text-sm lg:text-base">
-              Start Free{" "}
-              <span className="h-8 w-8 lg:h-10 lg:w-10 rounded-full flex items-center justify-center bg-primary text-white">
-                <ArrowRight size={18} />
-              </span>
+            <button className=" px-4 py-2 bg-white text-background rounded-full tracking-wider flex items-center gap-5 text-sm lg:text-base">
+              Start Free <ArrowRight size={18} />
             </button>
           </motion.a>
         </div>

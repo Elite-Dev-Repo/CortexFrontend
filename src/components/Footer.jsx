@@ -24,7 +24,7 @@ const Footer = () => {
           <div className="sm:col-span-2 md:col-span-1">
             <a
               href="/"
-              className="tracking-wider flex items-center gap-2 font-light text-white mb-3 lg:mb-4"
+              className="tracking-wider flex items-center gap-2  text-white mb-3 lg:mb-4"
             >
               <Blocks size={22} />
               Cortex
@@ -59,10 +59,16 @@ const Footer = () => {
             &copy; {new Date().getFullYear()} Cortex. All rights reserved.
           </p>
           <div className="flex items-center gap-4 lg:gap-6">
-            <a href="/" className="text-xs text-white/30 hover:text-white/60 transition-colors">
+            <a
+              href="/"
+              className="text-xs text-white/30 hover:text-white/60 transition-colors"
+            >
               Privacy Policy
             </a>
-            <a href="/" className="text-xs text-white/30 hover:text-white/60 transition-colors">
+            <a
+              href="/"
+              className="text-xs text-white/30 hover:text-white/60 transition-colors"
+            >
               Terms of Service
             </a>
           </div>

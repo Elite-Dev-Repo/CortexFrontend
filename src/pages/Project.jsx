@@ -1,23 +1,43 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { getProjectDataasNodes } from "@/lib/reactflowConstants";
+import "@xyflow/react/dist/style.css";
 import {
-  Plus,
-  X,
+  SidebarLeftIcon,
   LayoutDashboard,
-  Menu,
-  ArrowLeft,
-  SquareStack,
-  Tag,
-  Folder,
-  MoreHorizontal,
-  Trash2,
-} from "lucide-react";
+  Setting07Icon,
+  Logout05Icon,
+  ChartAnalysisIcon,
+  HelpCircleIcon,
+  WorkIcon,
+  Folder02Icon,
+  Add01Icon,
+  Cancel01Icon,
+  Layers01Icon,
+  Refresh03Icon,
+  SaveIcon,
+  Undo03Icon,
+} from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
-import { ACCESS } from "@/lib/constants";
+import { useAuth } from "@/hooks/useAuth";
+import { getErrorMessage } from "@/lib/errors";
 import { getProject, updateProject, deleteProject } from "@/lib/projectsApi";
 import { createFeature, deleteFeature } from "@/lib/featuresApi";
-import Sidebar from "@/components/Sidebar";
+import { getDashboardData } from "@/lib/dashboardApi";
+
+import {
+  ReactFlow,
+  applyNodeChanges,
+  applyEdgeChanges,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+} from "@xyflow/react";
+import MajorNode from "@/components/MajorNode";
+import FeatureNode from "@/components/FeatureNode";
 
 const STATUS_COLORS = {
   pending: {
@@ -37,13 +57,32 @@ const STATUS_COLORS = {
   },
 };
 
+const navActions = [
+  {
+    text: "Local save",
+    icon: <HugeiconsIcon icon={SaveIcon} size={18} />,
+    action: "g",
+  },
+  {
+    text: "revert",
+    icon: <HugeiconsIcon icon={Undo03Icon} size={18} />,
+    action: "g",
+  },
+  {
+    text: "DB sync",
+    icon: <HugeiconsIcon icon={Refresh03Icon} size={18} />,
+    action: "g",
+  },
+];
+
 const Project = () => {
   const { uuid, projectUuid } = useParams();
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [project, setProject] = useState(null);
   const [features, setFeatures] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [featureForm, setFeatureForm] = useState({
     name: "",
@@ -53,14 +92,9 @@ const Project = () => {
   const [creatingFeature, setCreatingFeature] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [featureMenu, setFeatureMenu] = useState(null);
-
-  useEffect(() => {
-    if (!localStorage.getItem(ACCESS)) {
-      navigate("/auth");
-      return;
-    }
-    fetchProject();
-  }, [projectUuid]);
+  const [dashboardData, setDashboardData] = useState({});
+  const [baseNodes, setBaseNodes] = useState([]);
+  const [baseEdges, setBaseEdges] = useState([]);
 
   const fetchProject = async () => {
     try {
@@ -74,6 +108,27 @@ const Project = () => {
       setLoading(false);
     }
   };
+
+  const fetchDashboard = async () => {
+    try {
+      const res = await getDashboardData();
+      setDashboardData(res);
+    } catch {
+      // silent
+    }
+  };
+
+  const fetchInitialNodes = async (id) => {
+    const res = await getProjectDataasNodes(id);
+    console.log("NODES ", res);
+    setBaseNodes(res);
+  };
+
+  useEffect(() => {
+    fetchProject();
+    fetchDashboard();
+    fetchInitialNodes(projectUuid);
+  }, [projectUuid]);
 
   const handleStatusChange = async (newStatus) => {
     try {
@@ -103,11 +158,28 @@ const Project = () => {
         project: projectUuid,
       });
       setFeatures((prev) => [...prev, feature]);
+      setNodes((prev) => [
+        ...prev,
+        {
+          id: String(feature.id),
+          data: {
+            name: feature.name,
+            description: feature.description,
+            tags: feature.tags,
+            status: feature.status,
+          },
+          position: {
+            x: Math.random() * 340 + 280,
+            y: Math.random() * 300 + 80,
+          },
+          type: "featureNode",
+        },
+      ]);
       setShowCreateFeature(false);
       setFeatureForm({ name: "", description: "", tags: "" });
       toast.success("Feature created");
     } catch (err) {
-      toast.error(err.response?.data?.name?.[0] || "Failed to create feature");
+      toast.error(getErrorMessage(err, "Failed to create feature"));
     } finally {
       setCreatingFeature(false);
     }
@@ -118,6 +190,7 @@ const Project = () => {
     try {
       await deleteFeature(id);
       setFeatures((prev) => prev.filter((f) => f.id !== id));
+      setNodes((prev) => prev.filter((n) => String(n.id) !== String(id)));
       toast.success("Feature deleted");
     } catch {
       toast.error("Failed to delete feature");
@@ -136,10 +209,30 @@ const Project = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(ACCESS);
-    localStorage.removeItem("refresh");
-    navigate("/auth");
+    logout();
+    navigate("/auth", { replace: true });
   };
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(baseNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const onConnect = useCallback((connection) => {
+    const edge = { ...connection, animated: true, id: crypto.randomUUID() };
+    setEdges((prevEdge) => addEdge(edge, prevEdge));
+  }, []);
+
+  const nodeTypes = useMemo(
+    () => ({
+      projectNode: MajorNode,
+      featureNode: FeatureNode,
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    setNodes(baseNodes);
+  }, [baseNodes]);
+  //Nodes END
 
   const sc = project
     ? STATUS_COLORS[project.status] || STATUS_COLORS.pending
@@ -147,247 +240,273 @@ const Project = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background text-white flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-      </div>
+      <section className="w-screen min-h-screen p-5 bg-foreground">
+        <div className="w-full h-full flex items-center justify-center min-h-[calc(100vh-40px)] bg-foreground rounded-lg">
+          <div className="w-12 h-12 bg-secondary animate-spin flex items-center justify-center text-white">
+            <HugeiconsIcon icon={LayoutDashboard} size={28} />
+          </div>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-white flex">
-      <Sidebar
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        onLogout={handleLogout}
-        sections={[
-          {
-            tag: "Main",
-            items: [
-              {
-                icon: LayoutDashboard,
-                label: "Dashboard",
-                onClick: () => navigate("/dashboard"),
-              },
-              {
-                icon: Folder,
-                label: project?.workspace_name || "Workspace",
-                onClick: () => navigate(`/workspace/${uuid}`),
-              },
-              {
-                icon: SquareStack,
-                label: project?.name || "Project",
-                active: true,
-              },
-            ],
-          },
-        ]}
-      />
-
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
-        <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 lg:px-8 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg shrink-0"
-            >
-              <Menu size={20} />
-            </button>
-            <button
-              onClick={() => navigate(`/workspace/${uuid}`)}
-              className="p-2 -ml-2 hover:bg-white/5 rounded-lg hidden sm:block shrink-0"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <h1 className="text-lg font-semibold truncate">{project?.name}</h1>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleDeleteProject}
-              className="p-2 hover:bg-white/5 rounded-lg text-white/30 hover:text-red-400 transition-all"
-            >
-              <Trash2 size={16} />
-            </button>
-            <button
-              onClick={() => setShowCreateFeature(true)}
-              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
-            >
-              <Plus size={16} />
-              <span className="hidden sm:inline">New Feature</span>
-            </button>
-          </div>
-        </header>
-
-        {/* Project meta bar */}
-        <div className="border-b border-white/5 px-4 lg:px-8 py-3 flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <button
-              onClick={() => setEditingStatus(!editingStatus)}
-              className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium ${sc.bg} ${sc.text} hover:opacity-80 transition-all`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-              {project?.status?.replace("_", " ")}
-            </button>
-            {editingStatus && (
-              <div className="absolute top-full left-0 mt-1 w-40 bg-foreground border border-white/10 rounded-lg shadow-xl py-1 z-20">
-                {["pending", "in_progress", "completed"].map((s) => {
-                  const c = STATUS_COLORS[s];
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => handleStatusChange(s)}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm ${c.text} hover:bg-white/5 ${project?.status === s ? "bg-white/5" : ""}`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-                      {s.replace("_", " ")}
-                    </button>
-                  );
-                })}
-              </div>
+    <section className="w-screen min-h-screen p-5 bg-foreground">
+      <div className="w-full min-h-[calc(100vh-40px)] flex items-stretch justify-between gap-3 text-secondary">
+        {/* Sidebar – same as Dashboard/Workspace */}
+        <div
+          className={`${showSidebar ? "w-60" : "w-fit"}  min-h-full bg-secondary text-background rounded-lg flex flex-col gap-3 items-between justify-start `}
+        >
+          <div className="w-full h-20 p-3 flex items-center justify-between border-b border-background/20">
+            {showSidebar && (
+              <Link to={"/"}>
+                <div className="flex items-center justify-start gap-3">
+                  <HugeiconsIcon icon={LayoutDashboard} />
+                  <p className="text-sm font-bold tracking-wide">Cortex</p>
+                </div>
+              </Link>
             )}
+            <div
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="rounded-lg hover:bg-secondary/5 cursor-pointer p-2 flex items-center justify-center"
+            >
+              <HugeiconsIcon icon={SidebarLeftIcon} size={20} />
+            </div>
           </div>
-          <span className="text-xs text-white/30">
-            {features.length} features
-          </span>
-          {project?.description && (
-            <span className="text-xs text-white/30 truncate max-w-[300px] ml-auto hidden md:block">
-              {project.description}
-            </span>
-          )}
-        </div>
 
-        {/* Content area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4 lg:p-8 space-y-8">
-            {/* Features section */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
-                  Features
-                </h2>
-              </div>
-              {features.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/10 rounded-xl">
-                  <SquareStack size={40} className="text-white/20 mb-3" />
-                  <p className="text-sm text-white/40 mb-4">
-                    Map your first feature to start breaking down this project.
-                  </p>
+          <div className=" flex flex-col w-full max-h-[calc(100vh-11em)] items-start justify-start gap-5 overflow-scroll scrollbar-none">
+            {/* Main */}
+            <div className="w-full flex flex-col items-start justify-center gap-4">
+              {showSidebar ? (
+                <h4 className="font-semibold text-[13px] uppercase pl-6 text-background/60">
+                  Main
+                </h4>
+              ) : (
+                <div className="pl-4">
+                  <HugeiconsIcon icon={WorkIcon} size={20} />
+                </div>
+              )}
+              {showSidebar && (
+                <div className="w-full flex flex-col items-start justify-center gap-2">
+                  <div
+                    onClick={() => navigate("/dashboard")}
+                    className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                  >
+                    <HugeiconsIcon
+                      icon={LayoutDashboard}
+                      size={16}
+                      strokeWidth={1.6}
+                    />
+                    <p className="text-sm font-medium">Dashboard</p>
+                  </div>
+                  <div
+                    onClick={() => navigate(`/workspace/${uuid}`)}
+                    className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                  >
+                    <HugeiconsIcon
+                      icon={Folder02Icon}
+                      size={16}
+                      strokeWidth={1.6}
+                    />
+                    <p className="text-sm font-medium truncate">
+                      {project?.workspace_name || "Workspace"}
+                    </p>
+                  </div>
+                  <div className="w-full border-l-3 border-primary flex items-center justify-start gap-3 px-4 py-2 bg-primary/10">
+                    <HugeiconsIcon
+                      icon={Layers01Icon}
+                      size={16}
+                      strokeWidth={1.6}
+                    />
+                    <p className="text-sm font-medium truncate">
+                      {project?.name || "Project"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Features */}
+            <div className="w-full flex flex-col items-start justify-center gap-4">
+              {showSidebar ? (
+                <div className="flex w-full justify-between items-center pr-4">
+                  <h4 className="font-semibold text-[13px] uppercase pl-6 text-background/60">
+                    Features
+                  </h4>
                   <button
                     onClick={() => setShowCreateFeature(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all"
+                    className="p-1 rounded hover:bg-secondary/5"
                   >
-                    <Plus size={15} /> Map a Feature
+                    <HugeiconsIcon icon={Add01Icon} size={14} />
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {features.map((feature, i) => (
-                    <motion.div
-                      key={feature.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: i * 0.05 }}
-                      onClick={() =>
-                        navigate(
-                          `/workspace/${uuid}/project/${projectUuid}/feature/${feature.id}`,
-                        )
-                      }
-                      className="bg-foreground border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all group cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <SquareStack
-                              size={15}
-                              className="text-white/40 shrink-0"
-                            />
-                            <h3 className="font-semibold text-sm truncate">
-                              {feature.name}
-                            </h3>
-                          </div>
-                          {feature.tags?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {feature.tags.map((tag, ti) => (
-                                <span
-                                  key={ti}
-                                  className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 font-medium"
-                                >
-                                  <Tag size={10} /> {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className="relative shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFeatureMenu(
-                                featureMenu === feature.id ? null : feature.id,
-                              );
-                            }}
-                            className="p-1 hover:bg-white/5 rounded-lg text-white/20 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            <MoreHorizontal size={14} />
-                          </button>
-                          {featureMenu === feature.id && (
-                            <div
-                              className="absolute right-0 top-7 w-28 bg-foreground border border-white/10 rounded-lg shadow-xl py-1 z-20"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                onClick={() => {
-                                  handleDeleteFeature(feature.id);
-                                  setFeatureMenu(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-white/5"
-                              >
-                                <Trash2 size={13} /> Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {feature.description && (
-                        <p className="text-xs text-white/40 mt-2 line-clamp-2">
-                          {feature.description}
-                        </p>
-                      )}
-                    </motion.div>
-                  ))}
+                <div className="pl-4">
+                  <HugeiconsIcon icon={Layers01Icon} size={20} />
                 </div>
               )}
-            </section>
+              {showSidebar && (
+                <div className="w-full flex flex-col items-start justify-center gap-2">
+                  {features.length === 0 ? (
+                    <p className="text-xs text-background/40 px-6 py-1">
+                      No features yet
+                    </p>
+                  ) : (
+                    features.slice(0, 5).map((f) => (
+                      <div
+                        key={f.id}
+                        onClick={() =>
+                          navigate(
+                            `/workspace/${uuid}/project/${projectUuid}/feature/${f.id}`,
+                          )
+                        }
+                        className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                      >
+                        <HugeiconsIcon
+                          icon={Layers01Icon}
+                          size={16}
+                          strokeWidth={1.6}
+                        />
+                        <p className="text-sm font-medium truncate">{f.name}</p>
+                      </div>
+                    ))
+                  )}
+                  {features.length > 5 && (
+                    <p className="text-xs text-background/30 px-6">
+                      +{features.length - 5} more
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* General */}
+            <div className="w-full flex flex-col items-start justify-center gap-4">
+              {showSidebar ? (
+                <h4 className="font-semibold text-[13px] uppercase pl-6 text-background/60">
+                  General
+                </h4>
+              ) : (
+                <div className="pl-4">
+                  <HugeiconsIcon icon={SidebarLeftIcon} size={20} />
+                </div>
+              )}
+              <div className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer">
+                <HugeiconsIcon
+                  icon={ChartAnalysisIcon}
+                  size={18}
+                  strokeWidth={2}
+                />
+                {showSidebar && <p className="text-sm font-medium">Analysis</p>}
+              </div>
+              <div className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer">
+                <HugeiconsIcon
+                  icon={HelpCircleIcon}
+                  size={18}
+                  strokeWidth={2}
+                />
+                {showSidebar && <p className="text-sm font-medium">Help</p>}
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full px-5 py-3 flex items-center justify-between gap-3 border-t border-background/20">
+            {showSidebar ? (
+              <>
+                <HugeiconsIcon
+                  icon={Setting07Icon}
+                  size={22}
+                  className="cursor-pointer"
+                />
+                <p className="truncate text-[14px]">
+                  {dashboardData.email || ""}
+                </p>
+                <div
+                  onClick={handleLogout}
+                  className="cursor-pointer hover:text-primary"
+                >
+                  <HugeiconsIcon icon={Logout05Icon} size={18} />
+                </div>
+              </>
+            ) : (
+              <>
+                <HugeiconsIcon icon={Setting07Icon} size={22} />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* MAIN */}
+        <div className="flex-1 min-h-[calc(100vh-40px)] h-[calc(100vh-40px)] flex flex-col rounded-lg bg-background overflow-hidden">
+          <div className="h-8 w-full bg-white/60 shadow-sm">
+            <div className="w-full h-full flex items-center gap-4 justify-start px-6">
+              {navActions.map((action, i) => {
+                return (
+                  <div
+                    key={i}
+                    className="relative p-2 hover:bg-foreground group cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {action.icon}
+                    <p className="group-hover:block top-8  text-[12px] absolute bg-white/80 hidden px-4 py-2">
+                      {action.text}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="h-full w-full flex-1 flex flex-col gap-3  overflow-hidden">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              nodesDraggable={true}
+              nodesConnectable={true}
+              elementsSelectable={true}
+              style={{ width: "100%", height: "100%" }}
+              className="border border-secondary/10 rounded-lg bg-[#fcfcf9]"
+              defaultEdgeOptions={{
+                animated: true,
+                style: { stroke: "#2e2e2e", strokeWidth: 1.5 },
+              }}
+            >
+              <Background />
+              <Controls className="!bg-white !border !border-secondary/10 !shadow-lg !rounded-sm [&>button]:!bg-white [&>button]:!border-secondary/10 [&>button]:!text-secondary hover:[&>button]:!bg-secondary hover:[&>button]:!text-white" />
+            </ReactFlow>
           </div>
         </div>
       </div>
 
-      {/* Create Feature modal */}
+      {/* Create Feature modal – dashboard card style */}
       {showCreateFeature && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/60"
             onClick={() => setShowCreateFeature(false)}
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-md bg-foreground border border-white/10 rounded-2xl p-6 sm:p-8"
-          >
+          <div className="relative w-full max-w-md bg-foreground border border-primary/20 rounded-sm p-6 sm:p-8 shadow-xl">
             <button
               onClick={() => setShowCreateFeature(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-white/5 rounded-lg text-white/40 hover:text-white"
+              className="absolute top-4 right-4 p-1.5 hover:bg-primary/5 rounded-sm text-primary/40 hover:text-primary"
             >
-              <X size={18} />
+              <HugeiconsIcon icon={Cancel01Icon} size={18} />
             </button>
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-white/5 rounded-lg">
-                <Plus size={18} />
+              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-primary/30 bg-primary/3 text-secondary">
+                <HugeiconsIcon icon={Add01Icon} size={18} />
               </div>
-              <h2 className="text-lg font-semibold">Map a Feature</h2>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Map a Feature
+              </h2>
             </div>
             <form onSubmit={handleCreateFeature} className="space-y-4">
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">
+                <label className="text-sm text-secondary/60 mb-1.5 block">
                   Name
                 </label>
                 <input
@@ -397,12 +516,12 @@ const Project = () => {
                     setFeatureForm((p) => ({ ...p, name: e.target.value }))
                   }
                   placeholder="User Authentication"
-                  className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
+                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">
+                <label className="text-sm text-secondary/60 mb-1.5 block">
                   Description (optional)
                 </label>
                 <textarea
@@ -415,11 +534,11 @@ const Project = () => {
                   }
                   placeholder="What does this feature do?"
                   rows={2}
-                  className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all resize-none"
+                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all resize-none"
                 />
               </div>
               <div>
-                <label className="text-sm text-white/60 mb-1.5 block">
+                <label className="text-sm text-secondary/60 mb-1.5 block">
                   Tags (comma separated)
                 </label>
                 <input
@@ -429,34 +548,34 @@ const Project = () => {
                     setFeatureForm((p) => ({ ...p, tags: e.target.value }))
                   }
                   placeholder="backend, auth, security"
-                  className="w-full bg-background border border-white/10 rounded-lg py-2.5 px-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
+                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateFeature(false)}
-                  className="flex-1 py-2.5 rounded-lg text-sm border border-white/10 hover:bg-white/5 transition-all"
+                  className="flex-1 py-2.5 rounded-sm text-sm border border-primary/10 hover:bg-primary/5 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingFeature}
-                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-white text-background hover:bg-white/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-sm text-sm font-semibold bg-primary text-secondary hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {creatingFeature ? (
-                    <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                    <span className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
                   ) : (
                     "Create Feature"
                   )}
                 </button>
               </div>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

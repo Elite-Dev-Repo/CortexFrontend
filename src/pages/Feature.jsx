@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, X, ArrowLeft, SquareStack, Trash2, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { ACCESS } from "@/lib/constants";
+import { useAuth } from "@/hooks/useAuth";
 import { getFeature, deleteFeature } from "@/lib/featuresApi";
 import { createTask, updateTask, deleteTask } from "@/lib/tasksApi";
 import Columns from "@/components/Columns";
@@ -11,6 +11,7 @@ import Columns from "@/components/Columns";
 const Feature = () => {
   const { uuid, projectUuid, featureUuid } = useParams();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const [feature, setFeature] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -19,14 +20,6 @@ const Feature = () => {
   const [newTaskName, setNewTaskName] = useState("");
   const [creatingTask, setCreatingTask] = useState(false);
   const [taskMenu, setTaskMenu] = useState(null);
-
-  useEffect(() => {
-    if (!localStorage.getItem(ACCESS)) {
-      navigate("/auth");
-      return;
-    }
-    fetchFeature();
-  }, [featureUuid]);
 
   const fetchFeature = async () => {
     try {
@@ -40,6 +33,10 @@ const Feature = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchFeature();
+  }, [featureUuid]);
 
   const handleAddTask = async (e) => {
     e.preventDefault();
@@ -92,34 +89,33 @@ const Feature = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem(ACCESS);
-    localStorage.removeItem("refresh");
-    navigate("/auth");
+    logout();
+    navigate("/auth", { replace: true });
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background text-white flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background text-primary flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-white flex flex-col">
+    <div className="min-h-screen bg-background text-primary flex flex-col">
       {/* Header */}
-      <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 lg:px-8 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+      <header className="h-16 border-b border-primary/10 flex items-center justify-between px-4 lg:px-8 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() =>
               navigate(`/workspace/${uuid}/project/${projectUuid}`)
             }
-            className="p-2 -ml-2 hover:bg-white/5 rounded-lg shrink-0"
+            className="p-2 -ml-2 hover:bg-primary/5 rounded-lg shrink-0"
           >
             <ArrowLeft size={18} />
           </button>
           <div className="flex items-center gap-2 min-w-0">
-            <SquareStack size={16} className="text-white/40 shrink-0" />
+            <SquareStack size={16} className="text-primary/40 shrink-0" />
             <h1 className="text-lg font-semibold truncate">{feature?.name}</h1>
           </div>
         </div>
@@ -129,7 +125,7 @@ const Feature = () => {
               {feature.tags.map((tag, ti) => (
                 <span
                   key={ti}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 font-medium"
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-primary/5 text-primary/50 font-medium"
                 >
                   {tag}
                 </span>
@@ -138,13 +134,13 @@ const Feature = () => {
           )}
           <button
             onClick={handleDeleteFeature}
-            className="p-2 hover:bg-white/5 rounded-lg text-white/30 hover:text-red-400 transition-all"
+            className="p-2 hover:bg-primary/5 rounded-lg text-primary/30 hover:text-red-400 transition-all"
           >
             <Trash2 size={16} />
           </button>
           <button
             onClick={handleLogout}
-            className="p-2 hover:bg-white/5 rounded-lg text-white/30 hover:text-white/60 transition-all"
+            className="p-2 hover:bg-primary/5 rounded-lg text-primary/30 hover:text-primary/60 transition-all"
           >
             <LogOut size={16} />
           </button>
@@ -152,21 +148,23 @@ const Feature = () => {
       </header>
 
       {feature?.description && (
-        <div className="px-4 lg:px-8 py-3 border-b border-white/5">
-          <p className="text-sm text-white/40">{feature.description}</p>
+        <div className="px-4 lg:px-8 py-3 border-b border-primary/5">
+          <p className="text-sm text-primary/40">{feature.description}</p>
         </div>
       )}
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-y-auto p-4 lg:p-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-primary/60 uppercase tracking-wider">
             Tasks{" "}
-            <span className="text-white/20 font-normal">({tasks.length})</span>
+            <span className="text-primary/20 font-normal">
+              ({tasks.length})
+            </span>
           </h2>
           <button
             onClick={() => setShowAddTask(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-secondary rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all primaryspace-nowrap"
           >
             <Plus size={14} /> Add Task
           </button>
@@ -187,13 +185,13 @@ const Feature = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-foreground border border-white/10 rounded-xl p-6 w-full max-w-md"
+            className="bg-foreground border border-primary/10 rounded-xl p-6 w-full max-w-md"
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold">New Task</h3>
               <button
                 onClick={() => setShowAddTask(false)}
-                className="p-1 hover:bg-white/5 rounded-lg text-white/40 hover:text-white"
+                className="p-1 hover:bg-primary/5 rounded-lg text-primary/40 hover:text-primary"
               >
                 <X size={16} />
               </button>
@@ -204,12 +202,12 @@ const Feature = () => {
                 value={newTaskName}
                 onChange={(e) => setNewTaskName(e.target.value)}
                 placeholder="Task name"
-                className="w-full px-3 py-2 bg-background border border-white/10 rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/30"
+                className="w-full px-3 py-2 bg-background border border-primary/10 rounded-lg text-sm text-primary placeholder-primary/20 focus:outline-none focus:border-primary/30"
               />
               <button
                 type="submit"
                 disabled={creatingTask || !newTaskName.trim()}
-                className="w-full py-2 bg-white text-background rounded-lg text-sm font-semibold hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-primary text-secondary rounded-lg text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creatingTask ? "Adding..." : "Add Task"}
               </button>
