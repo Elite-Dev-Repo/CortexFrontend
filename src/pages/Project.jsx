@@ -28,8 +28,6 @@ import { getDashboardData } from "@/lib/dashboardApi";
 
 import {
   ReactFlow,
-  applyNodeChanges,
-  applyEdgeChanges,
   Background,
   Controls,
   useNodesState,
@@ -38,6 +36,7 @@ import {
 } from "@xyflow/react";
 import MajorNode from "@/components/MajorNode";
 import FeatureNode from "@/components/FeatureNode";
+import { createEdge, getEdges, deleteEdge } from "@/lib/edgeApi";
 
 const STATUS_COLORS = {
   pending: {
@@ -117,18 +116,6 @@ const Project = () => {
       // silent
     }
   };
-
-  const fetchInitialNodes = async (id) => {
-    const res = await getProjectDataasNodes(id);
-    console.log("NODES ", res);
-    setBaseNodes(res);
-  };
-
-  useEffect(() => {
-    fetchProject();
-    fetchDashboard();
-    fetchInitialNodes(projectUuid);
-  }, [projectUuid]);
 
   const handleStatusChange = async (newStatus) => {
     try {
@@ -213,13 +200,101 @@ const Project = () => {
     navigate("/auth", { replace: true });
   };
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(baseNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  const onConnect = useCallback((connection) => {
-    const edge = { ...connection, animated: true, id: crypto.randomUUID() };
-    setEdges((prevEdge) => addEdge(edge, prevEdge));
-  }, []);
+  const fetchInitialNodes = async (id) => {
+    try {
+      const res = await getProjectDataasNodes(id);
+      setBaseNodes(res);
+      setNodes(res);
+    } catch (e) {
+      console.error("fetchInitialNodes failed", e);
+    }
+  };
+
+  const fetchInitialEdges = async () => {
+    try {
+      const res = await getEdges(projectUuid);
+      const list = Array.isArray(res) ? res : res ? [res] : [];
+      // Normalize to React Flow Edge shape + String IDs (fixes target:"10" vs 10)
+      const normalized = list
+        .filter((e) => e?.source && e?.target)
+        .map((e) => ({
+          id: String(e.id),
+          source: String(e.source),
+          target: String(e.target),
+          sourceHandle: e.sourceHandle ?? null,
+          targetHandle: e.targetHandle ?? null,
+          animated: e.animated ?? true,
+          // keep extra style so edges are visible even without CSS
+          style: e.style ?? { stroke: "#2e2e2e", strokeWidth: 1.5 },
+          type: e.type ?? "default",
+        }));
+      setBaseEdges(normalized);
+      setEdges(normalized);
+    } catch (e) {
+      console.error("fetchInitialEdges failed", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchProject();
+    fetchDashboard();
+    fetchInitialNodes(projectUuid);
+    fetchInitialEdges();
+  }, [projectUuid]);
+
+  // keep nodes in sync if baseNodes is updated elsewhere (e.g. refetch)
+  useEffect(() => {
+    if (baseNodes.length) setNodes(baseNodes);
+  }, [baseNodes]);
+
+  // keep edges in sync if baseEdges is updated (fixes previous missing sync)
+  useEffect(() => {
+    if (baseEdges.length) setEdges(baseEdges);
+  }, [baseEdges]);
+
+  const onConnect = useCallback(
+    async (connection) => {
+      const edge = {
+        ...connection,
+        animated: true,
+        id: crypto.randomUUID(),
+        style: { stroke: "#2e2e2e", strokeWidth: 1.5 },
+      };
+      setEdges((prev) => addEdge(edge, prev));
+      // persist to DB with BOTH handles (fixes missing sourceHandle)
+      try {
+        await createEdge({
+          id: edge.id,
+          source: String(edge.source),
+          target: String(edge.target),
+          sourceHandle: edge.sourceHandle ?? null,
+          targetHandle: edge.targetHandle ?? null,
+          animated: edge.animated ?? true,
+          project: projectUuid,
+        });
+        toast.success("Edge saved");
+      } catch (err) {
+        toast.error(getErrorMessage(err, "Failed to save edge"));
+        // rollback optimistic edge on failure
+        setEdges((prev) => prev.filter((e) => e.id !== edge.id));
+      }
+    },
+    [projectUuid],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes) => {
+      const removed = changes.filter((c) => c.type === "remove");
+      removed.forEach((c) => {
+        deleteEdge(c.id).catch((e) => console.error("deleteEdge failed", e));
+      });
+      onEdgesChange(changes);
+    },
+    [onEdgesChange],
+  );
 
   const nodeTypes = useMemo(
     () => ({
@@ -229,9 +304,8 @@ const Project = () => {
     [],
   );
 
-  useEffect(() => {
-    setNodes(baseNodes);
-  }, [baseNodes]);
+  //
+  //
   //Nodes END
 
   const sc = project
@@ -460,7 +534,7 @@ const Project = () => {
               nodes={nodes}
               edges={edges}
               onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
+              onEdgesChange={handleEdgesChange}
               onConnect={onConnect}
               nodeTypes={nodeTypes}
               fitView
@@ -489,10 +563,10 @@ const Project = () => {
             className="absolute inset-0 bg-black/60"
             onClick={() => setShowCreateFeature(false)}
           />
-          <div className="relative w-full max-w-md bg-foreground border border-primary/20 rounded-sm p-6 sm:p-8 shadow-xl">
+          <div className="relative w-full max-w-md bg-primary text-secondary border border-primary/20 rounded-sm p-6 sm:p-8 shadow-xl">
             <button
               onClick={() => setShowCreateFeature(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-primary/5 rounded-sm text-primary/40 hover:text-primary"
+              className="absolute top-4 right-4 p-1.5 hover:bg-primary/5 rounded-sm text-primary/40 hover:text-secondary"
             >
               <HugeiconsIcon icon={Cancel01Icon} size={18} />
             </button>
@@ -516,7 +590,7 @@ const Project = () => {
                     setFeatureForm((p) => ({ ...p, name: e.target.value }))
                   }
                   placeholder="User Authentication"
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all"
+                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-secondary placeholder-secondary/30 focus:outline-none focus:border-secondary/30 transition-all"
                   required
                 />
               </div>
@@ -534,7 +608,7 @@ const Project = () => {
                   }
                   placeholder="What does this feature do?"
                   rows={2}
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all resize-none"
+                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-secondary placeholder-secondary/30 focus:outline-none focus:border-secondary/30 transition-all resize-none"
                 />
               </div>
               <div>
@@ -548,21 +622,21 @@ const Project = () => {
                     setFeatureForm((p) => ({ ...p, tags: e.target.value }))
                   }
                   placeholder="backend, auth, security"
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all"
+                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-secondary placeholder-secondary/30 focus:outline-none focus:border-secondary/30 transition-all"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateFeature(false)}
-                  className="flex-1 py-2.5 rounded-sm text-sm border border-primary/10 hover:bg-primary/5 transition-all"
+                  className="flex-1 py-2.5 rounded-sm text-sm bg-background border border-secondary/10 hover:bg-background/85 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingFeature}
-                  className="flex-1 py-2.5 rounded-sm text-sm font-semibold bg-primary text-secondary hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-sm text-sm font-semibold bg-secondary text-primary hover:bg-secondary/85 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {creatingFeature ? (
                     <span className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
