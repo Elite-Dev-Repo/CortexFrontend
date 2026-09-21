@@ -1,12 +1,12 @@
 import api from "./api";
-import { ACCESS, REFRESH } from "./constants";
+
+/**
+ * Pure API layer - no side effects on storage or navigation.
+ * Token persistence and auth state are handled by AuthContext via tokenStorage.
+ */
 
 export const login = async (email, password) => {
   const { data } = await api.post("/token/", { email, password });
-  localStorage.removeItem(ACCESS);
-  localStorage.removeItem(REFRESH);
-  localStorage.setItem(ACCESS, data.access);
-  localStorage.setItem(REFRESH, data.refresh);
   return data;
 };
 
@@ -25,8 +25,7 @@ export const resendOtp = async (email) => {
   return data;
 };
 
-export const logout = () => {
-  localStorage.removeItem(ACCESS);
-  localStorage.removeItem(REFRESH);
-  window.location.href = "/auth";
+export const refreshToken = async (refresh) => {
+  const { data } = await api.post("/token/refresh/", { refresh });
+  return data;
 };

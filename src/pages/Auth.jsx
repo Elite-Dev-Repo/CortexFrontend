@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,25 +13,42 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
-import { login, register, verifyEmail, resendOtp } from "@/lib/authApi";
+import { useAuth } from "@/hooks/useAuth";
+import { getErrorMessage } from "@/lib/errors";
+
+const MODES = {
+  LOGIN: "login",
+  SIGNUP: "signup",
+  VERIFY: "verify",
+};
+
+const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const validatePassword = (password) => password.length >= 8;
 
 const Auth = () => {
-  const [mode, setMode] = useState("login");
+  const navigate = useNavigate();
+  const { login, register, verifyEmail, resendOtp } = useAuth();
+
+  const [mode, setMode] = useState(MODES.LOGIN);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [otp, setOtp] = useState("");
-  const [resending, setResending] = useState(false);
-  const navigate = useNavigate();
 
-  const toggleMode = () => {
-    setMode((prev) => (prev === "login" ? "signup" : "login"));
+  const resetForm = () => {
     setForm({ username: "", email: "", password: "" });
     setOtp("");
   };
 
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    resetForm();
+  };
+
   const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleOtpChange = (e) => {
@@ -39,61 +56,80 @@ const Auth = () => {
     if (val.length <= 6) setOtp(val);
   };
 
+  const handleLogin = async () => {
+    if (!validateEmail(form.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    if (!form.password) {
+      toast.error("Password is required.");
+      return;
+    }
+    await login(form.email, form.password);
+    toast.success("Welcome back!");
+    navigate("/dashboard");
+  };
+
+  const handleRegister = async () => {
+    if (!form.username.trim() || form.username.trim().length < 3) {
+      toast.error("Username must be at least 3 characters.");
+      return;
+    }
+    if (!validateEmail(form.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    if (!validatePassword(form.password)) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+    await register(form.username.trim(), form.email.trim(), form.password);
+    toast.success("Verification code sent to your email.");
+    setMode(MODES.VERIFY);
+  };
+
+  const handleVerify = async () => {
+    if (otp.length !== 6) {
+      toast.error("Enter the 6-digit verification code.");
+      return;
+    }
+    await verifyEmail(otp);
+    toast.success("Email verified! Sign in to continue.");
+    switchMode(MODES.LOGIN);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      if (mode === "login") {
-        await login(form.email, form.password);
-        toast.success("Welcome back!");
-        navigate("/dashboard");
-      } else if (mode === "signup") {
-        await register(form.username, form.email, form.password);
-        toast.success("Verification code sent to your email.");
-        setMode("verify");
-      } else {
-        await verifyEmail(otp);
-        toast.success("Email verified! Sign in to continue.");
-        setMode("login");
-        setOtp("");
-        setForm({ username: "", email: "", password: "" });
-      }
+      if (mode === MODES.LOGIN) await handleLogin();
+      else if (mode === MODES.SIGNUP) await handleRegister();
+      else await handleVerify();
     } catch (err) {
-      if (!err.response) {
-        toast.error("server unavailable.");
-      } else {
-        const message =
-          err.response?.data?.detail ||
-          err.response?.data?.email?.[0] ||
-          err.response?.data?.username?.[0] ||
-          err.response?.data?.password?.[0] ||
-          err.response?.data?.non_field_errors?.[0] ||
-          err.response?.data?.error?.[0] ||
-          err.response?.data?.error ||
-          "Something went wrong. Please try again.";
-        toast.error(message);
-      }
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
+  // Verify mode uses onClick via handleSubmit; keep form submit handling unified
   const handleResendOtp = async () => {
+    if (!validateEmail(form.email)) {
+      toast.error("Missing email for resending code.");
+      return;
+    }
     setResending(true);
     try {
-      await resendOtp(form.email);
+      await resendOtp(form.email.trim());
       toast.success("New code sent to your email.");
     } catch (err) {
-      if (err.response?.data?.error) {
-        toast.error(err.response.data.error);
-      } else {
-        toast.error("Failed to resend code. Try again.");
-      }
+      toast.error(getErrorMessage(err, "Failed to resend code. Try again."));
     } finally {
       setResending(false);
     }
   };
+
+  const isVerifyMode = mode === MODES.VERIFY;
 
   return (
     <div className="bg-background w-full min-h-screen text-white flex items-center justify-center overflow-hidden relative px-4">
@@ -109,42 +145,39 @@ const Auth = () => {
         <div className="bg-foreground/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-white/10">
           <div className="flex items-center justify-center gap-2 mb-6 sm:mb-8">
             <Blocks size={24} className="text-white" />
-            <span className="text-xl tracking-wider font-light">Cortex</span>
+            <span className="text-xl tracking-wider ">Cortex</span>
           </div>
 
           <div className="flex bg-background rounded-lg p-1 mb-8">
             <button
-              onClick={() => {
-                setMode("login");
-                setForm({ username: "", email: "", password: "" });
-              }}
-              className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === "login" ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
+              type="button"
+              onClick={() => switchMode(MODES.LOGIN)}
+              className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === MODES.LOGIN ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
             >
               Sign In
             </button>
             <button
-              onClick={() => {
-                setMode("signup");
-                setForm({ username: "", email: "", password: "" });
-              }}
-              className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === "signup" ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
+              type="button"
+              onClick={() => switchMode(MODES.SIGNUP)}
+              className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === MODES.SIGNUP ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
             >
               Sign Up
             </button>
           </div>
 
           <AnimatePresence mode="wait">
-            {mode !== "verify" ? (
+            {!isVerifyMode ? (
               <motion.form
                 key={mode}
-                initial={{ opacity: 0, x: mode === "login" ? -20 : 20 }}
+                initial={{ opacity: 0, x: mode === MODES.LOGIN ? -20 : 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: mode === "login" ? 20 : -20 }}
+                exit={{ opacity: 0, x: mode === MODES.LOGIN ? 20 : -20 }}
                 transition={{ duration: 0.2 }}
                 onSubmit={handleSubmit}
                 className="space-y-4"
+                noValidate
               >
-                {mode === "signup" && (
+                {mode === MODES.SIGNUP && (
                   <div>
                     <label className="text-sm text-white/60 mb-1.5 block">
                       Username
@@ -160,6 +193,7 @@ const Auth = () => {
                         value={form.username}
                         onChange={handleChange}
                         placeholder="johndoe"
+                        autoComplete="username"
                         className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
                         required
                       />
@@ -182,6 +216,7 @@ const Auth = () => {
                       value={form.email}
                       onChange={handleChange}
                       placeholder="you@example.com"
+                      autoComplete="email"
                       className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
                       required
                     />
@@ -203,13 +238,21 @@ const Auth = () => {
                       value={form.password}
                       onChange={handleChange}
                       placeholder="••••••••"
+                      autoComplete={
+                        mode === MODES.LOGIN
+                          ? "current-password"
+                          : "new-password"
+                      }
                       className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-black/80 hover:text-black/60"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -225,36 +268,36 @@ const Auth = () => {
                     <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      {mode === "login" ? "Sign In" : "Create Account"}
+                      {mode === MODES.LOGIN ? "Sign In" : "Create Account"}
                       <ArrowRight size={16} />
                     </>
                   )}
                 </button>
 
                 <p className="text-center text-sm text-white/40">
-                  {mode === "login" ? (
+                  {mode === MODES.LOGIN ? (
                     <>
-                      Don't have an account?{" "}
+                      Don&apos;t have an account?{" "}
                       <button
                         type="button"
-                        onClick={toggleMode}
+                        onClick={() => switchMode(MODES.SIGNUP)}
                         className="text-white hover:underline"
                       >
                         Sign up
                       </button>
                     </>
-                  ) : mode === "signup" ? (
+                  ) : (
                     <>
                       Already have an account?{" "}
                       <button
                         type="button"
-                        onClick={toggleMode}
+                        onClick={() => switchMode(MODES.LOGIN)}
                         className="text-white hover:underline"
                       >
                         Sign in
                       </button>
                     </>
-                  ) : null}
+                  )}
                 </p>
               </motion.form>
             ) : (
@@ -275,37 +318,38 @@ const Auth = () => {
                   </p>
                 </div>
 
-                <div>
-                  <label className="text-sm text-white/60 mb-1.5 block">
-                    Verification Code
-                  </label>
-                  <input
-                    type="text"
-                    name="otp"
-                    value={otp}
-                    onChange={handleOtpChange}
-                    placeholder="00ea2"
-                    maxLength={6}
-                    className="w-full bg-background border border-white/10 rounded-lg py-3 text-center text-xl tracking-[0.5em] text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-all font-mono"
-                    autoComplete="one-time-code"
-                  />
-                </div>
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                  <div>
+                    <label className="text-sm text-white/60 mb-1.5 block">
+                      Verification Code
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={otp}
+                      onChange={handleOtpChange}
+                      placeholder="000000"
+                      maxLength={6}
+                      className="w-full bg-background border border-white/10 rounded-lg py-3 text-center text-xl tracking-[0.5em] text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-all font-mono"
+                      autoComplete="one-time-code"
+                    />
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={loading || otp.length !== 6}
-                  className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      Verify Email
-                      <ShieldCheck size={16} />
-                    </>
-                  )}
-                </button>
+                  <button
+                    type="submit"
+                    disabled={loading || otp.length !== 6}
+                    className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Verify Email
+                        <ShieldCheck size={16} />
+                      </>
+                    )}
+                  </button>
+                </form>
 
                 <button
                   type="button"
@@ -326,10 +370,7 @@ const Auth = () => {
                 <p className="text-center text-sm text-white/40">
                   <button
                     type="button"
-                    onClick={() => {
-                      setMode("login");
-                      setOtp("");
-                    }}
+                    onClick={() => switchMode(MODES.LOGIN)}
                     className="text-white hover:underline"
                   >
                     Back to sign in

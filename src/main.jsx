@@ -10,6 +10,9 @@ import Workspace from "./pages/Workspace.jsx";
 import Project from "./pages/Project.jsx";
 import Feature from "./pages/Feature.jsx";
 import ProtectedRoutes from "./components/ProtectedRoutes";
+import PublicRoute from "./components/PublicRoute";
+import { AuthProvider } from "./context/AuthContext";
+import "@xyflow/react/dist/style.css";
 
 const router = createBrowserRouter([
   {
@@ -18,7 +21,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/auth",
-    element: <Auth />,
+    element: (
+      <PublicRoute>
+        <Auth />
+      </PublicRoute>
+    ),
   },
   {
     element: <ProtectedRoutes />,
@@ -45,7 +52,9 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
     <Toaster
       position="top-center"
       toastOptions={{

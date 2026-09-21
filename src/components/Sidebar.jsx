@@ -11,14 +11,18 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
         />
       )}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-foreground border-r border-white/10 transform transition-transform duration-200 ${
+        className={`fixed lg:static inset-y-0 left-0 z-30 w-55 bg-foreground  transform transition-transform duration-200 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } flex flex-col`}
       >
-        <div className="flex items-center gap-2 px-6 h-16 border-b border-white/10">
-          <Blocks size={22} />
+        <div
+          className="flex items-center gap-2 px-6 h-16 border-b border-primary/10 text-primary
+        "
+        >
           <Link to="/">
-            <span className="tracking-wider font-light">Cortex</span>
+            {" "}
+            <Blocks size={22} />
+            Correx
           </Link>
         </div>
 
@@ -26,7 +30,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
           {sections.map((section) => (
             <div key={section.tag}>
               {section.tag && (
-                <div className="text-white uppercase tracking-wider px-4 mb-2 text-[11px]">
+                <div className="text-primary font-semibold uppercase tracking-wider px-4 mb-2 text-[13px]">
                   {section.tag}
                 </div>
               )}
@@ -39,8 +43,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
                       setSidebarOpen(false);
                     }}
                     disabled={item.disabled}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/75 hover:text-white hover:bg-white/5 transition-all ${
-                      item.active ? "bg-white/10 font-medium text-white" : ""
+                    className={`w-full flex  font-semibold items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-primary hover:text-primary hover:bg-primary/5 transition-all ${
+                      item.active
+                        ? "bg-primary/10 font-medium text-primary"
+                        : ""
                     } ${item.disabled ? "cursor-not-allowed opacity-50" : ""}`}
                   >
                     <item.icon size={item.active ? 18 : 14} />
@@ -52,10 +58,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, sections, onLogout }) => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
+        <div className="p-4 border-t border-primary/10">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/75 hover:text-white hover:bg-white/5 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-primary/75 hover:text-primary hover:bg-primary/5 transition-all"
           >
             <LogOut size={18} />
             Sign Out

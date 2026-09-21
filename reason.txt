@@ -1,0 +1,29 @@
+Trajectory ID: 1e174615-3198-48d8-bc1d-0d4ef498b04f
+Error: request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": Post "https://oauth2.googleapis.com/token": net/http: TLS handshake timeout: request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": Post "https://oauth2.googleapis.com/token": net/http: TLS handshake timeout
+(1) tags: map[stream_receive_count:0 streaming_duration:0s]
+Wraps: (2) attached stack trace
+  -- stack trace:
+  | google3/third_party/gemini_coder/framework/generator/generator.(*streamResponseHandler).processStream
+  | 	third_party/gemini_coder/framework/generator/stream_handler.go:338
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).attemptGenerate
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:437
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).generateWithAPIRetry
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:278
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).generateWithModelOutputRetry
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:154
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).Generate
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:95
+  | google3/third_party/gemini_coder/framework/executor/executor.(*Executor).Execute
+  | 	third_party/gemini_coder/framework/executor/executor.go:303
+  | google3/third_party/jetski/cortex/cortex.(*CascadeManager).executeHelper.func1
+  | 	third_party/jetski/cortex/cascade_manager.go:1558
+  | google3/third_party/jetski/cortex/cortex.(*CascadeManager).executeHelper.func2
+  | 	third_party/jetski/cortex/cascade_manager.go:1676
+  | runtime.goexit
+  | 	third_party/go/gc/src/runtime/asm_amd64.s:1771
+Wraps: (3) request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": Post "https://oauth2.googleapis.com/token": net/http: TLS handshake timeout
+Wraps: (4) request failed
+Wraps: (5) Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse"
+Wraps: (6) Post "https://oauth2.googleapis.com/token"
+Wraps: (7) net/http: TLS handshake timeout
+Error types: (1) *go_utils.withTags (2) *withstack.withStack (3) *errutil.withPrefix (4) *fmt.wrapError (5) *url.Error (6) *url.Error (7) http.tlsHandshakeTimeoutError
