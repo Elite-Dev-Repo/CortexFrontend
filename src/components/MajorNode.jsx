@@ -4,7 +4,7 @@ import { Layers01Icon, Rocket01Icon } from "@hugeicons/core-free-icons";
 
 const MajorNode = ({ data }) => {
   return (
-    <div className="group relative min-w-[200px] max-w-[260px] sm:min-w-[268px] sm:max-w-[300px] bg-secondary text-background border border-primary shadow-[0_8px_32px_rgba(0,0,0,0.35)] cursor-grab active:cursor-grabbing select-none transition-all duration-300">
+    <div className="group relative w-[min(260px,calc(100vw-32px))] sm:w-auto sm:min-w-[268px] sm:max-w-[300px] max-w-[calc(100vw-24px)] bg-secondary text-background border border-primary shadow-[0_8px_32px_rgba(0,0,0,0.35)] cursor-grab active:cursor-grabbing select-none transition-all duration-300">
       {/* accent top bar */}
       {/* <div className="h-[3px] w-full bg-primary" /> */}
 

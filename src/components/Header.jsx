@@ -146,7 +146,7 @@ const Header = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="relative w-full h-[300px] lg:h-[340px] overflow-hidden rounded-xl "
+          className="relative w-full h-[260px] xs:h-[300px] sm:h-[320px] lg:h-[340px] xl:h-[360px] overflow-hidden rounded-xl "
         >
           <ReactFlow
             nodes={nodes}

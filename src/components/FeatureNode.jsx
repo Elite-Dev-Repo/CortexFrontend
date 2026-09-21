@@ -35,7 +35,7 @@ const FeatureNode = ({ data }) => {
   const st = statusMap[status] || statusMap.pending;
 
   return (
-    <div className="group relative min-w-[180px] max-w-[220px] sm:min-w-[236px] sm:max-w-[260px] bg-white text-secondary rounded-sm border border-primary/15 shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-grab active:cursor-grabbing select-none transition-all duration-300 ">
+    <div className="group relative w-[min(220px,calc(100vw-32px))] sm:w-auto sm:min-w-[236px] sm:max-w-[260px] max-w-[calc(100vw-24px)] bg-white text-secondary rounded-sm border border-primary/15 shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-grab active:cursor-grabbing select-none transition-all duration-300 ">
       {/* left accent */}
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary " />
 

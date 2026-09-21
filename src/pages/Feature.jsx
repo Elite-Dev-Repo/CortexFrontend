@@ -353,8 +353,8 @@ const Feature = () => {
   }
 
   return (
-    <section className="w-full min-h-screen p-2 sm:p-3 lg:p-5 bg-foreground">
-      <div className="w-full min-h-[calc(100vh-16px)] sm:min-h-[calc(100vh-24px)] lg:min-h-[calc(100vh-40px)] flex gap-2 sm:gap-3 text-secondary relative">
+    <section className="w-full min-h-screen min-h-[100dvh] p-2 sm:p-3 lg:p-5 bg-foreground">
+      <div className="w-full min-h-[calc(100vh-16px)] min-h-[calc(100dvh-16px)] sm:min-h-[calc(100vh-24px)] lg:min-h-[calc(100vh-40px)] flex gap-2 sm:gap-3 text-secondary relative">
         {showSidebar && <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden" onClick={() => setShowSidebar(false)} />}
         <div
           className={`flex flex-col bg-secondary text-background rounded-xl lg:rounded-lg z-40 transition-all duration-300 shrink-0

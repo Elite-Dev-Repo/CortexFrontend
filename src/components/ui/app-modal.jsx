@@ -28,7 +28,7 @@ export const AppModal = ({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -47,9 +47,9 @@ export const AppModal = ({
             aria-modal="true"
             aria-label={title}
             onClick={(e) => e.stopPropagation()}
-            className={`relative w-full ${maxWidth} bg-white border border-secondary/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.16)] overflow-hidden flex flex-col max-h-[90vh]`}
+            className={`relative w-full ${maxWidth} max-w-[calc(100vw-24px)] sm:max-w-[440px] bg-white border border-secondary/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.16)] overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh]`}
           >
-            <div className="px-6 pt-6 pb-4 border-b border-secondary/8 flex items-start gap-3">
+            <div className="px-4 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-secondary/8 flex items-start gap-3">
               {icon && (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary border border-secondary/10">
                   {icon}
