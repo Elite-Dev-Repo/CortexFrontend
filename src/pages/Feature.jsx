@@ -555,9 +555,9 @@ const Feature = () => {
         </div>
 
         {/* MAIN – Flow like Project page */}
-        <div className="flex-1 min-w-0 min-h-[calc(100vh-16px)] lg:min-h-[calc(100vh-40px)] h-[calc(100vh-16px)] lg:h-[calc(100vh-40px)] flex flex-col rounded-xl lg:rounded-lg bg-background overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-[calc(100vh-16px)] lg:min-h-[calc(100vh-40px)] h-[calc(100vh-16px)] lg:h-[calc(100vh-40px)] flex flex-col rounded-xl lg:rounded-lg bg-background overflow-hidden relative">
           {!showSidebar && (
-            <button onClick={() => setShowSidebar(true)} className="lg:hidden absolute top-3 left-3 z-20 h-9 w-9 bg-secondary text-white rounded-lg flex items-center justify-center shadow-lg">
+            <button onClick={() => setShowSidebar(true)} className="lg:hidden absolute top-3 right-3 z-20 h-9 w-9 bg-secondary text-white rounded-lg flex items-center justify-center shadow-lg">
               <HugeiconsIcon icon={SidebarLeftIcon} size={18} />
             </button>
           )}

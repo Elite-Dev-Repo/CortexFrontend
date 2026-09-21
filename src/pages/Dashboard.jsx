@@ -269,12 +269,12 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 min-h-full flex flex-col gap-3 rounded-xl lg:rounded-lg bg-foreground overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-full flex flex-col gap-3 rounded-xl lg:rounded-lg bg-foreground overflow-hidden relative">
           {/* Mobile sidebar toggle */}
           {!showSidebar && (
             <button
               onClick={() => setShowSidebar(true)}
-              className="lg:hidden absolute top-3 left-3 z-20 h-9 w-9 bg-secondary text-white rounded-lg flex items-center justify-center shadow-lg"
+              className="lg:hidden absolute top-3 right-3 z-20 h-9 w-9 bg-secondary text-white rounded-lg flex items-center justify-center shadow-lg"
             >
               <HugeiconsIcon icon={SidebarLeftIcon} size={18} />
             </button>
