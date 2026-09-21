@@ -12,7 +12,6 @@ import {
   UserGroup03Icon,
   Folder02Icon,
   Add01Icon,
-  Cancel01Icon,
   ArrowLeft01Icon,
   Layers01Icon,
   MoreHorizontalIcon,
@@ -30,6 +29,7 @@ import {
 } from "@/lib/workspacesApi";
 import { createProject, deleteProject } from "@/lib/projectsApi";
 import { getDashboardData } from "@/lib/dashboardApi";
+import { AppModal, Field, Input, Textarea } from "@/components/ui/app-modal";
 
 const Workspace = () => {
   const { uuid } = useParams();
@@ -149,11 +149,20 @@ const Workspace = () => {
   const projects = workspace?.projects || [];
 
   return (
-    <section className="w-screen min-h-screen p-5">
-      <div className="w-full h-full flex items-stretch justify-between gap-3 text-secondary">
-        {/* Sidebar – same as Dashboard */}
+    <section className="w-full min-h-screen p-2 sm:p-3 lg:p-5 bg-background">
+      <div className="w-full min-h-[calc(100vh-16px)] sm:min-h-[calc(100vh-24px)] lg:min-h-[calc(100vh-40px)] flex gap-2 sm:gap-3 text-secondary relative">
+        {showSidebar && (
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setShowSidebar(false)}
+          />
+        )}
         <div
-          className={`${showSidebar ? "w-60" : "w-fit"}  min-h-full bg-secondary text-background rounded-lg flex flex-col gap-3 items-between justify-start `}
+          className={`flex flex-col bg-secondary text-background rounded-xl lg:rounded-lg z-40 transition-all duration-300 shrink-0
+            fixed lg:static inset-y-2 lg:inset-auto left-2 lg:left-auto
+            ${showSidebar ? "w-[78vw] max-w-[280px] lg:w-60 translate-x-0" : "w-[78vw] max-w-[280px] lg:w-16 -translate-x-[calc(100%+16px)] lg:translate-x-0"}
+            min-h-[calc(100vh-16px)] lg:min-h-full max-h-[calc(100vh-16px)] lg:max-h-none overflow-hidden
+          `}
         >
           <div className="w-full h-20 p-3 flex items-center justify-between border-b border-background/20">
             {showSidebar && (
@@ -174,7 +183,7 @@ const Workspace = () => {
 
           <div className="flex flex-col w-full h-full items-start justify-start gap-5 overflow-scroll scrollbar-none">
             {/* Main */}
-            <div className="w-full flex flex-col items-start justify-center gap-4">
+            <div className="w-full flex flex-col items-start justify-center gap-4 pt-3">
               {showSidebar ? (
                 <h4 className="font-semibold text-[13px] uppercase pl-6 text-background/60">
                   Main
@@ -190,12 +199,22 @@ const Workspace = () => {
                     onClick={() => navigate("/dashboard")}
                     className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer"
                   >
-                    <HugeiconsIcon icon={LayoutDashboard} size={16} strokeWidth={1.6} />
+                    <HugeiconsIcon
+                      icon={LayoutDashboard}
+                      size={16}
+                      strokeWidth={1.6}
+                    />
                     <p className="text-sm font-medium">Dashboard</p>
                   </div>
                   <div className="w-full border-l-3 border-primary flex items-center justify-start gap-3 px-4 py-2 bg-primary/10">
-                    <HugeiconsIcon icon={Folder02Icon} size={16} strokeWidth={1.6} />
-                    <p className="text-sm font-medium truncate">{workspace?.name || "Workspace"}</p>
+                    <HugeiconsIcon
+                      icon={Folder02Icon}
+                      size={16}
+                      strokeWidth={1.6}
+                    />
+                    <p className="text-sm font-medium truncate">
+                      {workspace?.name || "Workspace"}
+                    </p>
                   </div>
                 </div>
               )}
@@ -223,21 +242,31 @@ const Workspace = () => {
               {showSidebar && (
                 <div className="w-full flex flex-col items-start justify-center gap-2">
                   {projects.length === 0 ? (
-                    <p className="text-xs text-secondary/40 px-6 py-1">No projects yet</p>
+                    <p className="text-xs text-secondary/40 px-6 py-1">
+                      No projects yet
+                    </p>
                   ) : (
                     projects.slice(0, 5).map((p) => (
                       <div
                         key={p.id}
-                        onClick={() => navigate(`/workspace/${uuid}/project/${p.id}`)}
+                        onClick={() =>
+                          navigate(`/workspace/${uuid}/project/${p.id}`)
+                        }
                         className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer"
                       >
-                        <HugeiconsIcon icon={Layers01Icon} size={16} strokeWidth={1.6} />
+                        <HugeiconsIcon
+                          icon={Layers01Icon}
+                          size={16}
+                          strokeWidth={1.6}
+                        />
                         <p className="text-sm font-medium truncate">{p.name}</p>
                       </div>
                     ))
                   )}
                   {projects.length > 5 && (
-                    <p className="text-xs text-secondary/30 px-6">+{projects.length - 5} more</p>
+                    <p className="text-xs text-secondary/30 px-6">
+                      +{projects.length - 5} more
+                    </p>
                   )}
                 </div>
               )}
@@ -256,7 +285,11 @@ const Workspace = () => {
                       onClick={() => navigate(`/workspace/${w.id}/`)}
                       className={`w-full border-l-3 flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer ${String(w.id) === String(uuid) ? "border-primary bg-primary/10" : "border-transparent hover:border-primary"}`}
                     >
-                      <HugeiconsIcon icon={Folder02Icon} size={16} strokeWidth={1.6} />
+                      <HugeiconsIcon
+                        icon={Folder02Icon}
+                        size={16}
+                        strokeWidth={1.6}
+                      />
                       <p className="text-sm font-medium truncate">{w.name}</p>
                     </div>
                   ))}
@@ -276,11 +309,21 @@ const Workspace = () => {
                 </div>
               )}
               <div className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer">
-                <HugeiconsIcon icon={ChartAnalysisIcon} size={18} strokeWidth={2} />
-                {showSidebar && <p className="text-sm font-medium">Analysis</p>}
+                <HugeiconsIcon
+                  icon={ChartAnalysisIcon}
+                  size={18}
+                  strokeWidth={2}
+                />
+                {showSidebar && (
+                  <p className="text-sm font-medium">Analytics</p>
+                )}
               </div>
               <div className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer">
-                <HugeiconsIcon icon={HelpCircleIcon} size={18} strokeWidth={2} />
+                <HugeiconsIcon
+                  icon={HelpCircleIcon}
+                  size={18}
+                  strokeWidth={2}
+                />
                 {showSidebar && <p className="text-sm font-medium">Help</p>}
               </div>
             </div>
@@ -289,9 +332,18 @@ const Workspace = () => {
           <div className="w-full px-5 py-3 flex items-center justify-between gap-3 border-t border-background/20">
             {showSidebar ? (
               <>
-                <HugeiconsIcon icon={Setting07Icon} size={22} className="cursor-pointer" />
-                <p className="truncate text-[14px]">{dashboardData.email || ""}</p>
-                <div onClick={handleLogout} className="cursor-pointer hover:text-primary">
+                <HugeiconsIcon
+                  icon={Setting07Icon}
+                  size={22}
+                  className="cursor-pointer"
+                />
+                <p className="truncate text-[14px]">
+                  {dashboardData.email || ""}
+                </p>
+                <div
+                  onClick={handleLogout}
+                  className="cursor-pointer hover:text-primary"
+                >
                   <HugeiconsIcon icon={Logout05Icon} size={18} />
                 </div>
               </>
@@ -304,11 +356,19 @@ const Workspace = () => {
         </div>
 
         {/* MAIN */}
-        <div className="flex-1 h-full flex flex-col gap-3 rounded-lg bg-foreground overflow-hidden">
+        <div className="flex-1 min-w-0 h-full flex flex-col gap-3 rounded-xl lg:rounded-lg bg-foreground overflow-hidden">
+          {!showSidebar && (
+            <button
+              onClick={() => setShowSidebar(true)}
+              className="lg:hidden absolute top-3 left-3 z-20 h-9 w-9 bg-secondary text-white rounded-lg flex items-center justify-center shadow-lg"
+            >
+              <HugeiconsIcon icon={SidebarLeftIcon} size={18} />
+            </button>
+          )}
           {/* Top block – Workspace header + Projects */}
-          <div className="w-full flex-1 flex flex-col gap-3 rounded-lg p-5">
+          <div className="w-full flex-1 flex flex-col gap-3 rounded-lg p-4 sm:p-5">
             {/* Workspace title row */}
-            <div className="w-full flex items-start justify-between gap-4">
+            <div className="w-full flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
               <div className="flex items-start gap-3 min-w-0">
                 <button
                   onClick={() => navigate("/dashboard")}
@@ -323,7 +383,8 @@ const Workspace = () => {
                     </h2>
                     <div className="hidden sm:flex w-fit px-3 py-1 rounded-full bg-primary text-secondary">
                       <p className="text-[10px] uppercase tracking-wider font-semibold">
-                        {workspace?.workspace_type || "Workspace"} · {projects.length} projects
+                        {workspace?.workspace_type || "Workspace"} ·{" "}
+                        {projects.length} projects
                       </p>
                     </div>
                   </div>
@@ -332,44 +393,47 @@ const Workspace = () => {
                       {workspace.description}
                     </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground/60 mt-1">No description</p>
+                    <p className="text-sm text-muted-foreground/60 mt-1">
+                      No description
+                    </p>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <button
                   onClick={() => setEditing(true)}
-                  className="h-9 w-9 flex items-center justify-center rounded-sm border border-primary/20 bg-primary/3 hover:border-primary/40 transition-colors text-secondary"
+                  className="h-9 w-9 flex items-center justify-center rounded-lg border border-secondary/10 bg-white hover:bg-secondary hover:text-white transition-colors text-secondary"
                   title="Edit workspace"
                 >
                   <HugeiconsIcon icon={PencilEdit02Icon} size={16} />
                 </button>
                 <button
                   onClick={handleDeleteWorkspace}
-                  className="hidden sm:flex h-9 w-9 items-center justify-center rounded-sm border border-red-200 bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
+                  className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
                   title="Delete workspace"
                 >
                   <HugeiconsIcon icon={Delete02Icon} size={16} />
                 </button>
                 <button
                   onClick={() => setShowCreateProject(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-secondary rounded-sm text-sm font-semibold hover:bg-primary/90 transition-all"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-secondary text-white rounded-lg text-sm font-semibold hover:bg-secondary/90 transition-all"
                 >
                   <HugeiconsIcon icon={Add01Icon} size={16} />
-                  <span className="hidden sm:inline">New Project</span>
-                  <span className="sm:hidden">New</span>
+                  <span>New Project</span>
                 </button>
               </div>
             </div>
 
             {/* Projects grid – dashboard card style */}
             {projects.length === 0 ? (
-              <div className="w-full flex-1 flex flex-col items-center justify-center py-16 border border-dashed border-primary/20 rounded-sm bg-primary/3">
+              <div className="w-full flex-1 flex flex-col items-center justify-center py-12 sm:py-16 px-4 border border-dashed border-secondary/10 rounded-xl bg-white/60 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-sm border border-primary/30 bg-primary/3 text-secondary mb-4">
                   <HugeiconsIcon icon={Layers01Icon} size={24} />
                 </div>
-                <h3 className="text-lg font-semibold tracking-tight">No projects yet</h3>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  No projects yet
+                </h3>
                 <p className="text-sm text-muted-foreground mt-1 max-w-xs text-center">
                   Projects help you organize features within this workspace.
                 </p>
@@ -383,17 +447,19 @@ const Workspace = () => {
               </div>
             ) : (
               <div className="w-full h-full">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold uppercase tracking-widest text-secondary/60">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs sm:text-sm font-semibold uppercase tracking-widest text-secondary/60">
                     Projects ({projects.length})
                   </h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   {projects.map((project) => (
                     <div
                       key={project.id}
-                      onClick={() => navigate(`/workspace/${uuid}/project/${project.id}`)}
-                      className="group relative flex flex-col items-start h-full min-w-0 rounded-sm border border-primary/20 bg-white p-5 transition-all duration-300 hover:border-primary/50 hover:bg-primary/6 cursor-pointer"
+                      onClick={() =>
+                        navigate(`/workspace/${uuid}/project/${project.id}`)
+                      }
+                      className="group relative flex flex-col items-start h-fit max-h-50 min-w-0 rounded-sm border border-primary/20 bg-white p-5 transition-all duration-300 hover:border-primary/50 hover:bg-primary/6 cursor-pointer"
                     >
                       {/* Header */}
                       <div className="w-full flex items-start justify-between gap-3">
@@ -418,11 +484,16 @@ const Workspace = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setMenuOpen(menuOpen === project.id ? null : project.id);
+                                setMenuOpen(
+                                  menuOpen === project.id ? null : project.id,
+                                );
                               }}
                               className="h-8 w-8 flex items-center justify-center rounded-full border border-primary/20 hover:border-primary hover:bg-primary hover:text-secondary transition-all opacity-0 group-hover:opacity-100"
                             >
-                              <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
+                              <HugeiconsIcon
+                                icon={MoreHorizontalIcon}
+                                size={16}
+                              />
                             </button>
                             {menuOpen === project.id && (
                               <div className="absolute right-0 top-9 w-36 bg-foreground border border-primary/10 rounded-sm shadow-xl py-1 z-20">
@@ -434,7 +505,10 @@ const Workspace = () => {
                                   }}
                                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-primary/5"
                                 >
-                                  <HugeiconsIcon icon={Delete02Icon} size={14} />
+                                  <HugeiconsIcon
+                                    icon={Delete02Icon}
+                                    size={14}
+                                  />
                                   Delete
                                 </button>
                               </div>
@@ -448,7 +522,7 @@ const Workspace = () => {
                         <p className="text-lg font-semibold tracking-tight truncate">
                           {project.name}
                         </p>
-                        <p className="text-sm leading-6 text-muted-foreground line-clamp-3 mt-1">
+                        <p className="text-sm leading-6 text-muted-foreground line-clamp-1 mt-1">
                           {project.description || "No description"}
                         </p>
                       </div>
@@ -459,7 +533,9 @@ const Workspace = () => {
                           <p className="text-[10px] flex items-center gap-2 uppercase tracking-widest font-medium text-muted-foreground">
                             Created
                             <span className="text-xs font-semibold text-secondary">
-                              {new Date(project.created_at).toLocaleDateString()}
+                              {new Date(
+                                project.created_at,
+                              ).toLocaleDateString()}
                             </span>
                           </p>
                         </div>
@@ -476,9 +552,9 @@ const Workspace = () => {
 
           {/* Bottom block – Analytics / Workspace meta like Dashboard's second block */}
           <div className="flex-1 rounded-lg">
-            <div className="w-full flex-1 flex flex-col gap-3 rounded-lg p-5">
-              <h2 className="text-2xl font-semibold">Overview</h2>
-              <div className="w-full h-full p-5 flex items-center justify-around gap-4">
+            <div className="w-full flex-1 flex flex-col gap-3 rounded-lg p-4 sm:p-5">
+              <h2 className="text-xl sm:text-2xl font-semibold">Overview</h2>
+              <div className="w-full h-full p-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="group relative flex-1 flex flex-col items-start h-full min-w-0 rounded-sm border border-primary/20 bg-white p-5 transition-all duration-300 hover:border-primary/50 hover:bg-primary/6">
                   <div className="w-full flex items-start justify-between gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-primary/30 bg-secondary text-primary">
@@ -491,15 +567,21 @@ const Workspace = () => {
                     </div>
                   </div>
                   <div className="w-full mt-3">
-                    <p className="text-lg font-semibold tracking-tight truncate">{workspace?.name}</p>
+                    <p className="text-lg font-semibold tracking-tight truncate">
+                      {workspace?.name}
+                    </p>
                     <p className="text-sm leading-6 text-muted-foreground line-clamp-3">
-                      {workspace?.description || "No description provided for this workspace."}
+                      {workspace?.description ||
+                        "No description provided for this workspace."}
                     </p>
                   </div>
                   <div className="w-full mt-auto pt-4 border-t border-primary/10 flex items-end justify-between">
                     <div>
                       <p className="text-[10px] flex items-center gap-2 uppercase tracking-widest font-medium text-muted-foreground">
-                        Projects <span className="text-lg font-semibold text-secondary">{projects.length}</span>
+                        Projects{" "}
+                        <span className="text-lg font-semibold text-secondary">
+                          {projects.length}
+                        </span>
                       </p>
                     </div>
                     <button
@@ -517,19 +599,27 @@ const Workspace = () => {
                       <HugeiconsIcon icon={ChartAnalysisIcon} size={21} />
                     </div>
                     <div className="w-fit px-3 py-1 rounded-full bg-primary text-secondary">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold">Analytics</p>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold">
+                        Analytics
+                      </p>
                     </div>
                   </div>
                   <div className="w-full mt-3">
-                    <p className="text-lg font-semibold tracking-tight">Activity</p>
+                    <p className="text-lg font-semibold tracking-tight">
+                      Activity
+                    </p>
                     <p className="text-sm leading-6 text-muted-foreground line-clamp-3">
-                      Track project progress, recent tasks and workspace health in one place.
+                      Track project progress, recent tasks and workspace health
+                      in one place.
                     </p>
                   </div>
                   <div className="w-full mt-auto pt-4 border-t border-primary/10 flex items-end justify-between">
                     <div>
                       <p className="text-[10px] flex items-center gap-2 uppercase tracking-widest font-medium text-muted-foreground">
-                        Total <span className="text-lg font-semibold text-secondary">{projects.length} projects</span>
+                        Total{" "}
+                        <span className="text-lg font-semibold text-secondary">
+                          {projects.length} projects
+                        </span>
                       </p>
                     </div>
                     <div className="h-8 w-8 flex items-center justify-center rounded-full border border-primary/20 transition-all duration-300 group-hover:border-primary group-hover:bg-primary group-hover:text-secondary">
@@ -544,11 +634,15 @@ const Workspace = () => {
                       <HugeiconsIcon icon={Layers01Icon} size={21} />
                     </div>
                     <div className="w-fit px-3 py-1 rounded-full bg-primary text-secondary">
-                      <p className="text-[10px] uppercase tracking-wider font-semibold">Quick Action</p>
+                      <p className="text-[10px] uppercase tracking-wider font-semibold">
+                        Quick Action
+                      </p>
                     </div>
                   </div>
                   <div className="w-full mt-3">
-                    <p className="text-lg font-semibold tracking-tight">Create Project</p>
+                    <p className="text-lg font-semibold tracking-tight">
+                      Create Project
+                    </p>
                     <p className="text-sm leading-6 text-muted-foreground line-clamp-3">
                       Start a new project to organize features and tasks.
                     </p>
@@ -571,126 +665,114 @@ const Workspace = () => {
         </div>
       </div>
 
-      {/* Edit workspace modal – dashboard card style */}
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setEditing(false)} />
-          <div className="relative w-full max-w-md bg-foreground border border-primary/20 rounded-sm p-6 sm:p-8 shadow-xl">
+      <AppModal
+        open={editing}
+        onClose={() => setEditing(false)}
+        title="Edit Workspace"
+        description="Update workspace details. Changes are saved to your account."
+        icon={<HugeiconsIcon icon={PencilEdit02Icon} size={16} />}
+      >
+        <form onSubmit={handleUpdateWorkspace} className="p-6 space-y-4">
+          <Field label="Name" required hint={`${editForm.name.length}/40`}>
+            <Input
+              autoFocus
+              value={editForm.name}
+              onChange={(e) =>
+                setEditForm((p) => ({ ...p, name: e.target.value }))
+              }
+              placeholder="Product Workspace"
+              maxLength={40}
+              required
+            />
+          </Field>
+          <Field
+            label="Description"
+            hint={`${editForm.description.length}/160`}
+          >
+            <Textarea
+              value={editForm.description}
+              onChange={(e) =>
+                setEditForm((p) => ({ ...p, description: e.target.value }))
+              }
+              placeholder="What's this workspace for?"
+              rows={3}
+              maxLength={160}
+            />
+          </Field>
+          <div className="flex gap-3 pt-2">
             <button
+              type="button"
               onClick={() => setEditing(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-primary/5 rounded-sm text-primary/40 hover:text-primary"
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium border border-secondary/10 hover:bg-secondary/5"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} />
+              Cancel
             </button>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-primary/30 bg-primary/3 text-secondary">
-                <HugeiconsIcon icon={PencilEdit02Icon} size={18} />
-              </div>
-              <h2 className="text-lg font-semibold tracking-tight">Edit Workspace</h2>
-            </div>
-            <form onSubmit={handleUpdateWorkspace} className="space-y-4">
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">Name</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">Description</label>
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
-                  rows={3}
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all resize-none"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditing(false)}
-                  className="flex-1 py-2.5 rounded-sm text-sm border border-primary/10 hover:bg-primary/5 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-sm text-sm font-semibold bg-primary text-secondary hover:bg-primary/90 transition-all"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Create project modal */}
-      {showCreateProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowCreateProject(false)} />
-          <div className="relative w-full max-w-md bg-foreground border border-primary/20 rounded-sm p-6 sm:p-8 shadow-xl">
             <button
-              onClick={() => setShowCreateProject(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-primary/5 rounded-sm text-primary/40 hover:text-primary"
+              type="submit"
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-secondary text-white hover:bg-secondary/90"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} />
+              Save Changes
             </button>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-primary/30 bg-primary/3 text-secondary">
-                <HugeiconsIcon icon={Add01Icon} size={18} />
-              </div>
-              <h2 className="text-lg font-semibold tracking-tight">Create Project</h2>
-            </div>
-            <form onSubmit={handleCreateProject} className="space-y-4">
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">Name</label>
-                <input
-                  type="text"
-                  value={projectForm.name}
-                  onChange={(e) => setProjectForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="My Project"
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">Description (optional)</label>
-                <textarea
-                  value={projectForm.description}
-                  onChange={(e) => setProjectForm((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="What's this project about?"
-                  rows={3}
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-primary placeholder-primary/30 focus:outline-none focus:border-primary/30 transition-all resize-none"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateProject(false)}
-                  className="flex-1 py-2.5 rounded-sm text-sm border border-primary/10 hover:bg-primary/5 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="flex-1 py-2.5 rounded-sm text-sm font-semibold bg-primary text-secondary hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {creating ? (
-                    <span className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    "Create"
-                  )}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        </form>
+      </AppModal>
+
+      <AppModal
+        open={showCreateProject}
+        onClose={() => setShowCreateProject(false)}
+        title="Create Project"
+        description="Projects organize features. Add one to this workspace."
+        icon={<HugeiconsIcon icon={Add01Icon} size={16} />}
+      >
+        <form onSubmit={handleCreateProject} className="p-6 space-y-4">
+          <Field label="Name" required hint={`${projectForm.name.length}/40`}>
+            <Input
+              autoFocus
+              value={projectForm.name}
+              onChange={(e) =>
+                setProjectForm((p) => ({ ...p, name: e.target.value }))
+              }
+              placeholder="My Project"
+              maxLength={40}
+              required
+            />
+          </Field>
+          <Field
+            label="Description"
+            hint={`${projectForm.description.length}/160`}
+          >
+            <Textarea
+              value={projectForm.description}
+              onChange={(e) =>
+                setProjectForm((p) => ({ ...p, description: e.target.value }))
+              }
+              placeholder="What's this project about?"
+              rows={3}
+              maxLength={160}
+            />
+          </Field>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowCreateProject(false)}
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium border border-secondary/10 hover:bg-secondary/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creating || !projectForm.name.trim()}
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-secondary text-white hover:bg-secondary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {creating ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                "Create Project"
+              )}
+            </button>
+          </div>
+        </form>
+      </AppModal>
     </section>
   );
 };

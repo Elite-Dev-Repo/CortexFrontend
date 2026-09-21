@@ -139,7 +139,7 @@ body {
 
 @layer component {
   .cont {
-    @apply max-w-300 mx-auto px-5;
+    @apply max-w-300 mx-auto px-4 sm:px-5;
   }
 }
 

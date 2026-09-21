@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { getProjectDataasNodes } from "@/lib/reactflowConstants";
+import { getProjectDataasNodes, MAIN_NODE_POS } from "@/lib/reactflowConstants";
 import "@xyflow/react/dist/style.css";
 import {
   SidebarLeftIcon,
@@ -13,7 +13,6 @@ import {
   WorkIcon,
   Folder02Icon,
   Add01Icon,
-  Cancel01Icon,
   Layers01Icon,
   Refresh03Icon,
   SaveIcon,
@@ -25,6 +24,7 @@ import { getErrorMessage } from "@/lib/errors";
 import { getProject, updateProject, deleteProject } from "@/lib/projectsApi";
 import { createFeature, deleteFeature } from "@/lib/featuresApi";
 import { getDashboardData } from "@/lib/dashboardApi";
+import { AppModal, Field, Input, Textarea } from "@/components/ui/app-modal";
 
 import {
   ReactFlow,
@@ -37,6 +37,7 @@ import {
 import MajorNode from "@/components/MajorNode";
 import FeatureNode from "@/components/FeatureNode";
 import { createEdge, getEdges, deleteEdge } from "@/lib/edgeApi";
+import { syncPositions } from "@/lib/syncApi";
 
 const STATUS_COLORS = {
   pending: {
@@ -55,24 +56,6 @@ const STATUS_COLORS = {
     dot: "bg-green-400",
   },
 };
-
-const navActions = [
-  {
-    text: "Local save",
-    icon: <HugeiconsIcon icon={SaveIcon} size={18} />,
-    action: "g",
-  },
-  {
-    text: "revert",
-    icon: <HugeiconsIcon icon={Undo03Icon} size={18} />,
-    action: "g",
-  },
-  {
-    text: "DB sync",
-    icon: <HugeiconsIcon icon={Refresh03Icon} size={18} />,
-    action: "g",
-  },
-];
 
 const Project = () => {
   const { uuid, projectUuid } = useParams();
@@ -94,6 +77,7 @@ const Project = () => {
   const [dashboardData, setDashboardData] = useState({});
   const [baseNodes, setBaseNodes] = useState([]);
   const [baseEdges, setBaseEdges] = useState([]);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchProject = async () => {
     try {
@@ -138,13 +122,20 @@ const Project = () => {
             .map((t) => t.trim())
             .filter(Boolean)
         : [];
+      // compute proper grid position for new feature (next free cell) - below fixed top-center main node
+      const featureCount = nodes.filter((n) => n.type === "featureNode").length;
+      const col = featureCount % 2;
+      const row = Math.floor(featureCount / 2);
+      const nextPos = { x: 240 + col * 320, y: 180 + row * 160 };
       const feature = await createFeature({
         name: featureForm.name,
         description: featureForm.description || undefined,
         tags,
         project: projectUuid,
+        position: nextPos,
       });
       setFeatures((prev) => [...prev, feature]);
+      const pos = feature.position && feature.position.x !== 0 && feature.position.y !== 0 ? feature.position : nextPos;
       setNodes((prev) => [
         ...prev,
         {
@@ -155,10 +146,7 @@ const Project = () => {
             tags: feature.tags,
             status: feature.status,
           },
-          position: {
-            x: Math.random() * 340 + 280,
-            y: Math.random() * 300 + 80,
-          },
+          position: pos,
           type: "featureNode",
         },
       ]);
@@ -202,6 +190,54 @@ const Project = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const handleLocalSave = () => {
+    try {
+      localStorage.setItem(`cortex:project:${projectUuid}:nodes`, JSON.stringify(nodes));
+      localStorage.setItem(`cortex:project:${projectUuid}:edges`, JSON.stringify(edges));
+      toast.success("Saved locally");
+    } catch {
+      toast.error("Local save failed");
+    }
+  };
+
+  const handleRevert = () => {
+    if (baseNodes.length) setNodes(baseNodes);
+    if (baseEdges.length) setEdges(baseEdges);
+    toast.success("Reverted to last DB state");
+  };
+
+  const handleDbSync = async () => {
+    if (!nodes.length) return toast.error("No nodes to sync");
+    setSyncing(true);
+    try {
+      const positions = nodes.map((n) => ({
+        id: n.id,
+        model: String(n.id) === String(projectUuid) ? "project" : "feature",
+        position: { x: Math.round(n.position.x), y: Math.round(n.position.y) },
+      }));
+      const res = await syncPositions(positions);
+      setBaseNodes(nodes);
+      const count = res?.updated?.length ?? positions.length;
+      if (res?.errors?.length) toast.warning(`Synced ${count} with ${res.errors.length} errors`);
+      else toast.success(`Synced ${count} positions to DB`);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "DB sync failed"));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const navActions = [
+    { text: "Local save", icon: <HugeiconsIcon icon={SaveIcon} size={18} />, onClick: handleLocalSave },
+    { text: "revert", icon: <HugeiconsIcon icon={Undo03Icon} size={18} />, onClick: handleRevert },
+    {
+      text: syncing ? "Syncing..." : "DB sync",
+      icon: <HugeiconsIcon icon={Refresh03Icon} size={18} className={syncing ? "animate-spin" : ""} />,
+      onClick: handleDbSync,
+      disabled: syncing,
+    },
+  ];
 
   const fetchInitialNodes = async (id) => {
     try {
@@ -257,8 +293,12 @@ const Project = () => {
 
   const onConnect = useCallback(
     async (connection) => {
+      // enforce bottom -> top mapping for main->child (fallback if user drags from any handle)
+      const srcIsMain = String(connection.source) === String(projectUuid);
       const edge = {
         ...connection,
+        sourceHandle: connection.sourceHandle ?? (srcIsMain ? "bottom" : "bottom"),
+        targetHandle: connection.targetHandle ?? "top",
         animated: true,
         id: crypto.randomUUID(),
         style: { stroke: "#2e2e2e", strokeWidth: 1.5 },
@@ -284,6 +324,35 @@ const Project = () => {
     },
     [projectUuid],
   );
+
+  // Enforce fixed top-center for main project node - clamp position changes and keep draggable false
+  const handleNodesChange = useCallback(
+    (changes) => {
+      const filtered = changes.map((c) => {
+        if (c.type === "position" && String(c.id) === String(projectUuid) && c.position) {
+          return { ...c, position: MAIN_NODE_POS };
+        }
+        if (c.type === "position" && c.position) {
+          // prevent accidental drag of main node via other change shapes
+          const nodeId = c.id;
+          if (String(nodeId) === String(projectUuid)) return { ...c, position: MAIN_NODE_POS };
+        }
+        return c;
+      });
+      onNodesChange(filtered);
+      // extra safety: if any change tried to move main, force correct pos in next tick
+      const movedMain = changes.some((c) => c.type === "position" && String(c.id) === String(projectUuid));
+      if (movedMain) {
+        setNodes((prev) => prev.map((n) => (String(n.id) === String(projectUuid) ? { ...n, position: MAIN_NODE_POS, draggable: false } : n)));
+      }
+    },
+    [onNodesChange, projectUuid],
+  );
+
+  // keep main node pinned even if baseNodes sync or external update tries to offset it
+  useEffect(() => {
+    setNodes((prev) => prev.map((n) => (String(n.id) === String(projectUuid) ? { ...n, position: MAIN_NODE_POS, draggable: false } : n)));
+  }, [projectUuid]);
 
   const handleEdgesChange = useCallback(
     (changes) => {
@@ -325,11 +394,15 @@ const Project = () => {
   }
 
   return (
-    <section className="w-screen min-h-screen p-5 bg-foreground">
-      <div className="w-full min-h-[calc(100vh-40px)] flex items-stretch justify-between gap-3 text-secondary">
-        {/* Sidebar – same as Dashboard/Workspace */}
+    <section className="w-full min-h-screen p-2 sm:p-3 lg:p-5 bg-foreground">
+      <div className="w-full min-h-[calc(100vh-16px)] sm:min-h-[calc(100vh-24px)] lg:min-h-[calc(100vh-40px)] flex gap-2 sm:gap-3 text-secondary relative">
+        {showSidebar && <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden" onClick={() => setShowSidebar(false)} />}
         <div
-          className={`${showSidebar ? "w-60" : "w-fit"}  min-h-full bg-secondary text-background rounded-lg flex flex-col gap-3 items-between justify-start `}
+          className={`flex flex-col bg-secondary text-background rounded-xl lg:rounded-lg z-40 transition-all duration-300 shrink-0
+            fixed lg:static inset-y-2 lg:inset-auto left-2 lg:left-auto
+            ${showSidebar ? "w-[78vw] max-w-[280px] lg:w-60 translate-x-0" : "w-[78vw] max-w-[280px] lg:w-16 -translate-x-[calc(100%+16px)] lg:translate-x-0"}
+            min-h-[calc(100vh-16px)] lg:min-h-full max-h-[calc(100vh-16px)] lg:max-h-none overflow-hidden
+          `}
         >
           <div className="w-full h-20 p-3 flex items-center justify-between border-b border-background/20">
             {showSidebar && (
@@ -471,7 +544,9 @@ const Project = () => {
                   size={18}
                   strokeWidth={2}
                 />
-                {showSidebar && <p className="text-sm font-medium">Analysis</p>}
+                {showSidebar && (
+                  <p className="text-sm font-medium">Analytics</p>
+                )}
               </div>
               <div className="w-full border-l-3 border-transparent hover:border-primary flex items-center justify-start gap-3 px-4 py-2 hover:bg-primary/10 cursor-pointer">
                 <HugeiconsIcon
@@ -511,20 +586,28 @@ const Project = () => {
         </div>
 
         {/* MAIN */}
-        <div className="flex-1 min-h-[calc(100vh-40px)] h-[calc(100vh-40px)] flex flex-col rounded-lg bg-background overflow-hidden">
+        <div className="flex-1 min-w-0 min-h-[calc(100vh-16px)] lg:min-h-[calc(100vh-40px)] h-[calc(100vh-16px)] lg:h-[calc(100vh-40px)] flex flex-col rounded-xl lg:rounded-lg bg-background overflow-hidden">
+          {!showSidebar && (
+            <button onClick={() => setShowSidebar(true)} className="lg:hidden absolute top-3 left-3 z-20 h-9 w-9 bg-secondary text-white rounded-lg flex items-center justify-center shadow-lg">
+              <HugeiconsIcon icon={SidebarLeftIcon} size={18} />
+            </button>
+          )}
           <div className="h-8 w-full bg-white/60 shadow-sm">
-            <div className="w-full h-full flex items-center gap-4 justify-start px-6">
+            <div className="w-full h-full flex items-center gap-2 sm:gap-4 justify-start px-3 sm:px-6">
               {navActions.map((action, i) => {
                 return (
-                  <div
+                  <button
                     key={i}
-                    className="relative p-2 hover:bg-foreground group cursor-pointer flex items-center justify-center gap-2"
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    title={action.text}
+                    className="relative p-2 hover:bg-foreground group cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {action.icon}
-                    <p className="group-hover:block top-8  text-[12px] absolute bg-white/80 hidden px-4 py-2">
+                    <p className="group-hover:block top-8 text-[12px] absolute bg-white/80 hidden px-4 py-2 whitespace-nowrap z-10 shadow">
                       {action.text}
                     </p>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -533,7 +616,7 @@ const Project = () => {
             <ReactFlow
               nodes={nodes}
               edges={edges}
-              onNodesChange={onNodesChange}
+              onNodesChange={handleNodesChange}
               onEdgesChange={handleEdgesChange}
               onConnect={onConnect}
               nodeTypes={nodeTypes}
@@ -556,99 +639,32 @@ const Project = () => {
         </div>
       </div>
 
-      {/* Create Feature modal – dashboard card style */}
-      {showCreateFeature && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setShowCreateFeature(false)}
-          />
-          <div className="relative w-full max-w-md bg-primary text-secondary border border-primary/20 rounded-sm p-6 sm:p-8 shadow-xl">
-            <button
-              onClick={() => setShowCreateFeature(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-primary/5 rounded-sm text-primary/40 hover:text-secondary"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={18} />
+      <AppModal
+        open={showCreateFeature}
+        onClose={() => setShowCreateFeature(false)}
+        title="Map a Feature"
+        description="Features break your project into buildable pieces. Tags help you filter later."
+        icon={<HugeiconsIcon icon={Add01Icon} size={16} />}
+      >
+        <form onSubmit={handleCreateFeature} className="p-6 space-y-4">
+          <Field label="Name" required hint={`${featureForm.name.length}/40`}>
+            <Input autoFocus value={featureForm.name} onChange={(e) => setFeatureForm((p) => ({ ...p, name: e.target.value }))} placeholder="User Authentication" maxLength={40} required />
+          </Field>
+          <Field label="Description" hint={`${featureForm.description.length}/160`}>
+            <Textarea value={featureForm.description} onChange={(e) => setFeatureForm((p) => ({ ...p, description: e.target.value }))} placeholder="What does this feature do?" rows={3} maxLength={160} />
+          </Field>
+          <Field label="Tags" hint="comma separated">
+            <Input value={featureForm.tags} onChange={(e) => setFeatureForm((p) => ({ ...p, tags: e.target.value }))} placeholder="backend, auth, security" />
+            <p className="text-[11px] text-secondary/40">e.g. frontend, api, v2 — we’ll split on commas.</p>
+          </Field>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setShowCreateFeature(false)} className="flex-1 py-2.5 rounded-lg text-sm font-medium border border-secondary/10 hover:bg-secondary/5">Cancel</button>
+            <button type="submit" disabled={creatingFeature || !featureForm.name.trim()} className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-secondary text-white hover:bg-secondary/90 disabled:opacity-50 flex items-center justify-center gap-2">
+              {creatingFeature ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Create Feature"}
             </button>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-sm border border-primary/30 bg-primary/3 text-secondary">
-                <HugeiconsIcon icon={Add01Icon} size={18} />
-              </div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Map a Feature
-              </h2>
-            </div>
-            <form onSubmit={handleCreateFeature} className="space-y-4">
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={featureForm.name}
-                  onChange={(e) =>
-                    setFeatureForm((p) => ({ ...p, name: e.target.value }))
-                  }
-                  placeholder="User Authentication"
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-secondary placeholder-secondary/30 focus:outline-none focus:border-secondary/30 transition-all"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={featureForm.description}
-                  onChange={(e) =>
-                    setFeatureForm((p) => ({
-                      ...p,
-                      description: e.target.value,
-                    }))
-                  }
-                  placeholder="What does this feature do?"
-                  rows={2}
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-secondary placeholder-secondary/30 focus:outline-none focus:border-secondary/30 transition-all resize-none"
-                />
-              </div>
-              <div>
-                <label className="text-sm text-secondary/60 mb-1.5 block">
-                  Tags (comma separated)
-                </label>
-                <input
-                  type="text"
-                  value={featureForm.tags}
-                  onChange={(e) =>
-                    setFeatureForm((p) => ({ ...p, tags: e.target.value }))
-                  }
-                  placeholder="backend, auth, security"
-                  className="w-full bg-background border border-primary/10 rounded-sm py-2.5 px-4 text-sm text-secondary placeholder-secondary/30 focus:outline-none focus:border-secondary/30 transition-all"
-                />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateFeature(false)}
-                  className="flex-1 py-2.5 rounded-sm text-sm bg-background border border-secondary/10 hover:bg-background/85 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingFeature}
-                  className="flex-1 py-2.5 rounded-sm text-sm font-semibold bg-secondary text-primary hover:bg-secondary/85 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {creatingFeature ? (
-                    <span className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    "Create Feature"
-                  )}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        </form>
+      </AppModal>
     </section>
   );
 };

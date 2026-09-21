@@ -4,7 +4,7 @@ import { Layers01Icon, Rocket01Icon } from "@hugeicons/core-free-icons";
 
 const MajorNode = ({ data }) => {
   return (
-    <div className="group relative min-w-[268px] max-w-[300px] bg-secondary text-background border border-primary shadow-[0_8px_32px_rgba(0,0,0,0.35)] cursor-grab active:cursor-grabbing select-none transition-all duration-300">
+    <div className="group relative min-w-[200px] max-w-[260px] sm:min-w-[268px] sm:max-w-[300px] bg-secondary text-background border border-primary shadow-[0_8px_32px_rgba(0,0,0,0.35)] cursor-grab active:cursor-grabbing select-none transition-all duration-300">
       {/* accent top bar */}
       {/* <div className="h-[3px] w-full bg-primary" /> */}
 
@@ -20,7 +20,7 @@ const MajorNode = ({ data }) => {
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
             <span className="text-[10px] leading-none tracking-[0.14em] font-bold uppercase text-primary/90 bg-primary/10 border border-primary/20 px-2 py-1 rounded-full">
-              Project
+              {data?.kind || "Project"}
             </span>
           </div>
         </div>
@@ -42,27 +42,30 @@ const MajorNode = ({ data }) => {
         </div>
       </div>
 
-      {/* handles - styled to match theme */}
+      {/* handles - main node: fixed top-center, children mapped from bottom */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!w-3 !h-3 !bg-secondary/70 "
+        id="top"
+        className="!w-3 !h-3 !bg-secondary/70 !opacity-0 pointer-events-none"
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-3 !h-3 !bg-secondary/70 "
+        id="bottom"
+        className="!w-3 !h-3 !bg-primary !border-2 !border-white shadow-md"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!w-3 !h-3 !bg-secondary/70 "
+        id="right"
+        className="!w-3 !h-3 !bg-secondary/70 !opacity-0 pointer-events-none"
       />
       <Handle
         type="target"
         position={Position.Left}
         id="left"
-        className="!w-3 !h-3 !bg-secondary/70 "
+        className="!w-3 !h-3 !bg-secondary/70 !opacity-0 pointer-events-none"
       />
     </div>
   );

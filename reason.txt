@@ -1,73 +1,29 @@
-Why edges from DB are not showing - Root Causes
-----------------------------------------
-
-Given DB response:
-[
-  {
-    "id": "cda3e502-2bcd-4aae-88fe-0aab69094e41",
-    "animated": true,
-    "source": "3232f2c9-5100-4215-92c6-0f6ee68fcc5a",
-    "target": "10",
-    "targetHandle": "left",
-    "user": 1
-  }
-]
-
-1. Edges never hydrated into React Flow state - PRIMARY CAUSE
-   - src/pages/Project.jsx:95-96 `const [baseEdges,setBaseEdges]=useState([])`
-   - src/pages/Project.jsx:204 `const [edges,setEdges,onEdgesChange]=useEdgesState(baseEdges)` // baseEdges is [] at mount -> edges=[]
-   - src/pages/Project.jsx:212-215
-     const fetchInitialEdges = async () => {
-       const res = await getEdges(); // res = [{id,source,target,...}]  array
-       setBaseEdges((prevEdge) => addEdge(res, prevEdge));
-     }
-     BUG: `addEdge` signature is `addEdge(edge: Edge, edges: Edge[])`. You pass the entire array `res` as a single edge object. `addEdge` does `edges.concat(edge)` where edge is an array, producing `[[{...}]]` or invalid shape. React Flow expects `Edge[]` flat array, so it receives nested array / malformed edge with no `source` string at top level and renders 0 edges.
-   - src/pages/Project.jsx:253-256
-     useEffect(()=>{ setNodes(baseNodes); fetchInitialEdges(); },[baseNodes])
-     Only syncs `baseNodes -> nodes`. There is NO `setEdges(baseEdges)` effect. Even if `setBaseEdges` had succeeded, `edges` (from useEdgesState) never updates because `baseEdges` change does not propagate to `edges`. No `useEffect(()=> setEdges(baseEdges),[baseEdges])`.
-   - Result: `edges` stays `[]` forever. `<ReactFlow edges={edges}>` at src/pages/Project.jsx:491 receives empty array, so DB edges never render.
-
-   Fix:
-     const res = await getEdges(); // Edge[]
-     setEdges(res.map(e=> ({...e, id:String(e.id), source:String(e.source), target:String(e.target)})))
-     // or
-     setBaseEdges(res); + useEffect(()=>setEdges(baseEdges),[baseEdges])
-     // NOT addEdge(res,...)
-
-2. String vs integer ID mismatch filtered silently
-   - src/lib/reactflowConstants.js:10 `id: String(res.id)` and :16 `id: String(feature.id)` - nodes are always strings.
-   - DB edge: `source:"3232f2c9-..."` (string UUID) ok, `target:"10"` (string "10").
-   - If `res.id` from `/project/:id/` is integer 10 -> String(10)="10" matches, edge shows. But if project UUID is `"10"` as integer but feature IDs are UUIDs, the edge source UUID must exactly match a feature node id. If DB was seeded before nodes existed, source `"3232f..."` may not exist in current `res.features` (deleted feature / different project). React Flow silently drops edges where `source` or `target` node id not found - no error, just invisible.
-   - Also `String` coercion not done on edges: DB returns `"10"` already string but if backend ever returns 10 as number, React Flow does strict `===` check and fails. Always normalize: `String(e.source)`, `String(e.target)`.
-
-3. Handle ID mismatch
-   - DB edge has `targetHandle:"left"` and no `sourceHandle`.
-   - src/components/MajorNode.jsx:33-41 and src/components/FeatureNode.jsx:55-58 define:
-     <Handle type="target" position={Position.Top} /> // no id -> id=undefined
-     <Handle type="source" position={Position.Bottom} /> // no id
-     <Handle id="left" position={Position.Left} />  // id="left"
-     <Handle id="right" position={Position.Right} /> // id="right"
-   - Edge with `targetHandle:"left"` correctly targets Left handle, but `sourceHandle: undefined` means React Flow connects from default Bottom handle. That's valid, but if you ever create edge via drag from Right handle (id="right"), `onConnect` at src/pages/Project.jsx:223 creates `edge = {...connection}` which includes `sourceHandle:"right"`. Then handleEdgeDBSync at :241 only sends `targetHandle` not `sourceHandle`:
-     createEdge({id, animated, source, target, targetHandle}) // missing sourceHandle
-     On reload, sourceHandle lost -> edge reattaches to default handle, looks shifted / not where user drew. Not fatal but causes "edge not where expected".
-
-4. Global edge fetch leaks across projects
-   - src/lib/edgeApi.js:7 `api.get("edge/")` fetches ALL edges for user 1, not filtered by `projectUuid`.
-   - src/pages/Project.jsx:212 calls it verbatim. If DB has 20 edges from other projects, you try to render them all in current canvas. Edges whose source/target not in current nodes are invalid and dropped, but also pollutes state. You need `api.get(`edge/?project=${projectUuid}`)` or filter: `res.filter(e=> nodesIdSet.has(String(e.source)) && nodesIdSet.has(String(e.target)))`.
-
-5. Fetch timing race + missing dependency
-   - src/pages/Project.jsx:217-221 `useEffect(fetchInitialNodes,[projectUuid])` fetches nodes.
-   - src/pages/Project.jsx:253 `useEffect(fetchInitialEdges,[baseNodes])` fetches edges AFTER nodes.
-     Problem: `fetchInitialEdges` is called every time `baseNodes` changes (on feature create -> nodes update -> refetch edges infinitely). Also on first render `baseNodes=[]` -> triggers fetch before nodes exist, so edges added before nodes exist are considered invalid for one render frame.
-   - Better: fetch nodes+edges in same effect after project load, or `Promise.all`, then set both states once.
-
-6. createEdge sync is disabled and incomplete
-   - src/pages/Project.jsx:236-252 `hadleEdgeDBSync` (typo) extracts `createdEdges[edges.length-1]` but never called: src/pages/Project.jsx:259 `// hadleEdgeDBSync(edges)` commented out. So new edges drawn via `onConnect` at :223-225 stay local only, never POST to DB. On reload they disappear, making it look like "DB edges not working".
-   - And `onConnect` generates `id:crypto.randomUUID()` client side, but DB also has its own id generation. After POST, response `res` at edgeApi.js:3 logs but never replaces local id with server id, causing duplicate id on next fetch.
-   - Also `edgeApi.js:3` `createEdge` does `api.post("edge/",payload)` without returning data or handling `sourceHandle`. Payload missing `project` FK if backend requires it -> 400 silently caught at Project.jsx:249 `console.log(error)` no toast.
-
-7. Extra field `user:1` not stripped but harmless
-   - DB edge includes `user:1` which React Flow ignores (passes through). Not breaking, but if you do `setEdges(res)` directly, React Flow clones edge and `user` remains extra prop - okay. However `addEdge` will spread it and may cause `edge.user` to be treated as edge data, still renders.
-
-Summary flow:
-getEdges() -> returns [{id,source:"3232...",target:"10",targetHandle:"left"}] -> addEdge(array,[]) misused -> baseEdges becomes malformed nested array -> edges state never synced from baseEdges -> ReactFlow receives [] -> nothing renders. Even if you fix addEdge to setEdges(res), edge with target "10" only shows if node id String(10) exists and handle id "left" exists; otherwise React Flow filters it. Fix by replacing fetchInitialEdges with direct setEdges + String coercion + filtering by current project nodes + adding useEffect to sync baseEdges->edges, and include sourceHandle in create payload.
+Trajectory ID: 1e174615-3198-48d8-bc1d-0d4ef498b04f
+Error: request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": Post "https://oauth2.googleapis.com/token": net/http: TLS handshake timeout: request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": Post "https://oauth2.googleapis.com/token": net/http: TLS handshake timeout
+(1) tags: map[stream_receive_count:0 streaming_duration:0s]
+Wraps: (2) attached stack trace
+  -- stack trace:
+  | google3/third_party/gemini_coder/framework/generator/generator.(*streamResponseHandler).processStream
+  | 	third_party/gemini_coder/framework/generator/stream_handler.go:338
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).attemptGenerate
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:437
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).generateWithAPIRetry
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:278
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).generateWithModelOutputRetry
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:154
+  | google3/third_party/gemini_coder/framework/generator/generator.(*PlannerGenerator).Generate
+  | 	third_party/gemini_coder/framework/generator/planner_generator.go:95
+  | google3/third_party/gemini_coder/framework/executor/executor.(*Executor).Execute
+  | 	third_party/gemini_coder/framework/executor/executor.go:303
+  | google3/third_party/jetski/cortex/cortex.(*CascadeManager).executeHelper.func1
+  | 	third_party/jetski/cortex/cascade_manager.go:1558
+  | google3/third_party/jetski/cortex/cortex.(*CascadeManager).executeHelper.func2
+  | 	third_party/jetski/cortex/cascade_manager.go:1676
+  | runtime.goexit
+  | 	third_party/go/gc/src/runtime/asm_amd64.s:1771
+Wraps: (3) request failed: Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse": Post "https://oauth2.googleapis.com/token": net/http: TLS handshake timeout
+Wraps: (4) request failed
+Wraps: (5) Post "https://daily-cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse"
+Wraps: (6) Post "https://oauth2.googleapis.com/token"
+Wraps: (7) net/http: TLS handshake timeout
+Error types: (1) *go_utils.withTags (2) *withstack.withStack (3) *errutil.withPrefix (4) *fmt.wrapError (5) *url.Error (6) *url.Error (7) http.tlsHandshakeTimeoutError
