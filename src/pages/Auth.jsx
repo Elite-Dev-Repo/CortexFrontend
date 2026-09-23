@@ -1,20 +1,23 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  Blocks,
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  User,
-  ArrowRight,
-  ShieldCheck,
-  RefreshCw,
-} from "lucide-react";
+  Mail01Icon,
+  LockKeyIcon,
+  User02Icon,
+  ArrowRight01Icon,
+  ShieldKeyIcon,
+  ViewIcon,
+  ViewOffIcon,
+  RefreshIcon,
+  SparklesIcon,
+} from "@hugeicons/core-free-icons";
+import { Blocks } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { getErrorMessage } from "@/lib/errors";
+import { Field, Input } from "@/components/ui/app-modal";
 
 const MODES = {
   LOGIN: "login",
@@ -44,6 +47,7 @@ const Auth = () => {
   const switchMode = (nextMode) => {
     setMode(nextMode);
     resetForm();
+    setShowPassword(false);
   };
 
   const handleChange = (e) => {
@@ -112,7 +116,6 @@ const Auth = () => {
     }
   };
 
-  // Verify mode uses onClick via handleSubmit; keep form submit handling unified
   const handleResendOtp = async () => {
     if (!validateEmail(form.email)) {
       toast.error("Missing email for resending code.");
@@ -131,254 +134,325 @@ const Auth = () => {
 
   const isVerifyMode = mode === MODES.VERIFY;
 
+  const title = isVerifyMode
+    ? "Verify your email"
+    : mode === MODES.LOGIN
+      ? "Welcome back"
+      : "Create your account";
+
+  const description = isVerifyMode
+    ? "We've sent a 6-digit code to your inbox"
+    : mode === MODES.LOGIN
+      ? "Sign in to continue building with Cortex"
+      : "Join Cortex and start shipping faster";
+
+  const headerIcon = isVerifyMode ? (
+    <HugeiconsIcon icon={ShieldKeyIcon} size={16} />
+  ) : mode === MODES.LOGIN ? (
+    <HugeiconsIcon icon={SparklesIcon} size={16} />
+  ) : (
+    <HugeiconsIcon icon={User02Icon} size={16} />
+  );
+
   return (
-    <div className="bg-background w-full min-h-screen text-white flex items-center justify-center overflow-hidden relative px-4">
-      <div className="absolute w-60 h-60 md:w-100 md:h-100 bg-white/5 rounded-full top-0 right-0 blur-3xl pointer-events-none" />
-      <div className="absolute w-60 h-60 md:w-80 md:h-80 bg-white/5 rounded-full bottom-0 left-0 blur-3xl pointer-events-none" />
+    <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center px-4 py-8 sm:py-10 relative overflow-hidden">
+      {/* subtle background - matches app-modal / dashboard palette */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-secondary/[0.04] blur-[80px]" />
+        <div className="absolute -bottom-40 -left-40 h-[600px] w-[600px] rounded-full bg-primary/25 blur-[90px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#2e2e2e07_1px,transparent_1px),linear-gradient(to_bottom,#2e2e2e07_1px,transparent_1px)] bg-[size:32px_32px]" />
+      </div>
+
+      {/* top brand */}
+      <Link
+        to="/"
+        className="inline-flex items-center gap-2.5 mb-6 sm:mb-8 text-secondary hover:opacity-80 transition-opacity"
+      >
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-primary border border-secondary/10">
+          <Blocks size={16} />
+        </span>
+        <span className="text-[15px] font-semibold tracking-tight">Cortex</span>
+      </Link>
 
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md mx-auto z-10"
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-[440px]"
       >
-        <div className="bg-foreground/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-white/10">
-          <div className="flex items-center justify-center gap-2 mb-6 sm:mb-8">
-            <Blocks size={24} className="text-white" />
-            <span className="text-xl tracking-wider ">Cortex</span>
+        {/* card - same language as AppModal */}
+        <div className="bg-white border border-secondary/10 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.14)] overflow-hidden">
+          {/* header like AppModal header */}
+          <div className="px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-secondary/8 flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary border border-secondary/10">
+              {headerIcon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[15px] font-semibold tracking-tight text-secondary leading-5">
+                {title}
+              </h1>
+              <p className="text-xs leading-4 text-secondary/55 mt-0.5">
+                {description}
+              </p>
+            </div>
+            <Link
+              to="/"
+              className="hidden sm:inline-flex shrink-0 h-8 px-3 items-center justify-center rounded-lg text-xs font-medium text-secondary/60 hover:text-secondary hover:bg-secondary/5 border border-transparent hover:border-secondary/10 transition-colors"
+            >
+              Back to site
+            </Link>
           </div>
 
-          <div className="flex bg-background rounded-lg p-1 mb-8">
-            <button
-              type="button"
-              onClick={() => switchMode(MODES.LOGIN)}
-              className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === MODES.LOGIN ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode(MODES.SIGNUP)}
-              className={`flex-1 py-2 text-sm rounded-md transition-all ${mode === MODES.SIGNUP ? "bg-white text-background font-semibold" : "text-white/60 hover:text-white"}`}
-            >
-              Sign Up
-            </button>
-          </div>
+          {/* content */}
+          <div className="p-5 sm:p-6">
+            {/* segmented tabs - only when not verify */}
+            {!isVerifyMode && (
+              <div className="flex bg-background border border-secondary/8 rounded-lg p-1 mb-6">
+                <button
+                  type="button"
+                  onClick={() => switchMode(MODES.LOGIN)}
+                  className={`flex-1 py-2 text-[13px] font-medium rounded-md transition-all ${
+                    mode === MODES.LOGIN
+                      ? "bg-secondary text-white shadow-sm"
+                      : "text-secondary/50 hover:text-secondary"
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode(MODES.SIGNUP)}
+                  className={`flex-1 py-2 text-[13px] font-medium rounded-md transition-all ${
+                    mode === MODES.SIGNUP
+                      ? "bg-secondary text-white shadow-sm"
+                      : "text-secondary/50 hover:text-secondary"
+                  }`}
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
 
-          <AnimatePresence mode="wait">
-            {!isVerifyMode ? (
-              <motion.form
-                key={mode}
-                initial={{ opacity: 0, x: mode === MODES.LOGIN ? -20 : 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: mode === MODES.LOGIN ? 20 : -20 }}
-                transition={{ duration: 0.2 }}
-                onSubmit={handleSubmit}
-                className="space-y-4"
-                noValidate
-              >
-                {mode === MODES.SIGNUP && (
-                  <div>
-                    <label className="text-sm text-white/60 mb-1.5 block">
-                      Username
-                    </label>
+            <AnimatePresence mode="wait">
+              {!isVerifyMode ? (
+                <motion.form
+                  key={mode}
+                  initial={{ opacity: 0, x: mode === MODES.LOGIN ? -8 : 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: mode === MODES.LOGIN ? 8 : -8 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                  onSubmit={handleSubmit}
+                  className="space-y-4"
+                  noValidate
+                >
+                  {mode === MODES.SIGNUP && (
+                    <Field label="Username" required>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary/30 pointer-events-none">
+                          <HugeiconsIcon icon={User02Icon} size={16} />
+                        </span>
+                        <Input
+                          type="text"
+                          name="username"
+                          value={form.username}
+                          onChange={handleChange}
+                          placeholder="johndoe"
+                          autoComplete="username"
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </Field>
+                  )}
+
+                  <Field label="Email" required>
                     <div className="relative">
-                      <User
-                        size={16}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                      />
-                      <input
-                        type="text"
-                        name="username"
-                        value={form.username}
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary/30 pointer-events-none">
+                        <HugeiconsIcon icon={Mail01Icon} size={16} />
+                      </span>
+                      <Input
+                        type="email"
+                        name="email"
+                        value={form.email}
                         onChange={handleChange}
-                        placeholder="johndoe"
-                        autoComplete="username"
-                        className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        className="pl-10"
                         required
                       />
                     </div>
-                  </div>
-                )}
+                  </Field>
 
-                <div>
-                  <label className="text-sm text-white/60 mb-1.5 block">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                    />
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                      className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm text-white/60 mb-1.5 block">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40"
-                    />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      value={form.password}
-                      onChange={handleChange}
-                      placeholder="••••••••"
-                      autoComplete={
-                        mode === MODES.LOGIN
-                          ? "current-password"
-                          : "new-password"
-                      }
-                      className="w-full bg-background border border-white/10 rounded-lg py-2.5 pl-10 pr-10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-all"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-black/80 hover:text-black/60"
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      {mode === MODES.LOGIN ? "Sign In" : "Create Account"}
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
-
-                <p className="text-center text-sm text-white/40">
-                  {mode === MODES.LOGIN ? (
-                    <>
-                      Don&apos;t have an account?{" "}
+                  <Field
+                    label="Password"
+                    required
+                    hint={mode === MODES.SIGNUP ? "Min. 8 characters" : undefined}
+                  >
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary/30 pointer-events-none">
+                        <HugeiconsIcon icon={LockKeyIcon} size={16} />
+                      </span>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={form.password}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        autoComplete={
+                          mode === MODES.LOGIN ? "current-password" : "new-password"
+                        }
+                        className="pl-10 pr-10"
+                        required
+                      />
                       <button
                         type="button"
-                        onClick={() => switchMode(MODES.SIGNUP)}
-                        className="text-white hover:underline"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-md text-secondary/40 hover:text-secondary hover:bg-secondary/5 transition-colors"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                       >
-                        Sign up
+                        <HugeiconsIcon
+                          icon={showPassword ? ViewOffIcon : ViewIcon}
+                          size={16}
+                        />
                       </button>
-                    </>
-                  ) : (
-                    <>
-                      Already have an account?{" "}
-                      <button
-                        type="button"
-                        onClick={() => switchMode(MODES.LOGIN)}
-                        className="text-white hover:underline"
-                      >
-                        Sign in
-                      </button>
-                    </>
-                  )}
-                </p>
-              </motion.form>
-            ) : (
-              <motion.div
-                key="verify"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                <div className="text-center space-y-2">
-                  <ShieldCheck size={40} className="mx-auto text-white/80" />
-                  <h3 className="text-lg font-semibold">Verify your email</h3>
-                  <p className="text-sm text-white/50">
-                    Enter the 6-digit code sent to{" "}
-                    <span className="text-white/80">{form.email}</span>
-                  </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                  <div>
-                    <label className="text-sm text-white/60 mb-1.5 block">
-                      Verification Code
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={otp}
-                      onChange={handleOtpChange}
-                      placeholder="000000"
-                      maxLength={6}
-                      className="w-full bg-background border border-white/10 rounded-lg py-3 text-center text-xl tracking-[0.5em] text-white placeholder-white/20 focus:outline-none focus:border-white/30 transition-all font-mono"
-                      autoComplete="one-time-code"
-                    />
-                  </div>
+                    </div>
+                  </Field>
 
                   <button
                     type="submit"
-                    disabled={loading || otp.length !== 6}
-                    className="w-full bg-white text-background font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loading}
+                    className="w-full bg-secondary text-white font-semibold py-2.5 rounded-lg text-[13px] flex items-center justify-center gap-2 hover:bg-secondary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
                     {loading ? (
-                      <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
                       <>
-                        Verify Email
-                        <ShieldCheck size={16} />
+                        {mode === MODES.LOGIN ? "Sign In" : "Create Account"}
+                        <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
                       </>
                     )}
                   </button>
-                </form>
 
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={resending}
-                  className="w-full bg-transparent border border-white/10 text-white/60 hover:text-white hover:border-white/30 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  <p className="text-center text-xs leading-4 text-secondary/50 pt-1">
+                    {mode === MODES.LOGIN ? (
+                      <>
+                        Don&apos;t have an account?{" "}
+                        <button
+                          type="button"
+                          onClick={() => switchMode(MODES.SIGNUP)}
+                          className="font-medium text-secondary hover:underline underline-offset-4"
+                        >
+                          Sign up
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Already have an account?{" "}
+                        <button
+                          type="button"
+                          onClick={() => switchMode(MODES.LOGIN)}
+                          className="font-medium text-secondary hover:underline underline-offset-4"
+                        >
+                          Sign in
+                        </button>
+                      </>
+                    )}
+                  </p>
+                </motion.form>
+              ) : (
+                <motion.div
+                  key="verify"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                  className="space-y-5"
                 >
-                  {resending ? (
-                    <span className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <RefreshCw size={14} />
-                      Resend Code
-                    </>
-                  )}
-                </button>
+                  <div className="rounded-lg bg-background border border-secondary/8 px-4 py-3 flex items-start gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-secondary/10 text-secondary">
+                      <HugeiconsIcon icon={Mail01Icon} size={16} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-secondary leading-4">
+                        Code sent to
+                      </p>
+                      <p className="text-[13px] font-semibold text-secondary truncate">
+                        {form.email || "your email"}
+                      </p>
+                      <p className="text-[11px] text-secondary/50 mt-0.5">
+                        Enter the 6-digit code to verify your account. Check spam if needed.
+                      </p>
+                    </div>
+                  </div>
 
-                <p className="text-center text-sm text-white/40">
+                  <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                    <Field label="Verification Code" required hint="6 digits">
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={otp}
+                        onChange={handleOtpChange}
+                        placeholder="• • • • • •"
+                        maxLength={6}
+                        className="text-center text-[18px] tracking-[0.45em] font-mono py-3 placeholder:tracking-[0.45em]"
+                        autoComplete="one-time-code"
+                      />
+                    </Field>
+
+                    <button
+                      type="submit"
+                      disabled={loading || otp.length !== 6}
+                      className="w-full bg-secondary text-white font-semibold py-2.5 rounded-lg text-[13px] flex items-center justify-center gap-2 hover:bg-secondary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    >
+                      {loading ? (
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Verify Email
+                          <HugeiconsIcon icon={ShieldKeyIcon} size={16} />
+                        </>
+                      )}
+                    </button>
+                  </form>
+
                   <button
                     type="button"
-                    onClick={() => switchMode(MODES.LOGIN)}
-                    className="text-white hover:underline"
+                    onClick={handleResendOtp}
+                    disabled={resending}
+                    className="w-full bg-white border border-secondary/10 text-secondary/70 hover:text-secondary hover:border-secondary/20 hover:bg-secondary/5 py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Back to sign in
+                    {resending ? (
+                      <span className="w-4 h-4 border-2 border-secondary/20 border-t-secondary rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <HugeiconsIcon icon={RefreshIcon} size={14} />
+                        Resend Code
+                      </>
+                    )}
                   </button>
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
+                  <p className="text-center text-xs text-secondary/50">
+                    <button
+                      type="button"
+                      onClick={() => switchMode(MODES.LOGIN)}
+                      className="font-medium text-secondary hover:underline underline-offset-4"
+                    >
+                      Back to sign in
+                    </button>
+                    <span className="mx-2 text-secondary/20">•</span>
+                    <button
+                      type="button"
+                      onClick={() => switchMode(MODES.SIGNUP)}
+                      className="text-secondary/60 hover:text-secondary hover:underline underline-offset-4"
+                    >
+                      Change email
+                    </button>
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
         </div>
       </motion.div>
     </div>
